@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(MyApp());
@@ -109,55 +111,70 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   TextEditingController _controller = TextEditingController();
   List<Map<String, dynamic>> _messages = [];
-  int _lastId = 0;  // Track the last message ID for pagination
+  int _lastId = 0;
 
-  // Fetch messages from the API
   Future<void> _fetchMessages() async {
-    const String url = "http://192.168.3.11:8080/messages";
-    final response = await http.get(
-      Uri.parse("$url?chat_id=1:2&user_id=2&last_id=$_lastId"),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse("http://hope.ioaths.com/hope/messages?chat_id=1:2&user_id=2&last_id=$_lastId"),
+      );
 
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      setState(() {
-        // Add fetched messages to the list
-        _messages = data.map((message) => {
-          "id": message["id"],
-          "sender_id": message["sender_id"],
-          "receiver_id": message["receiver_id"],
-          "content": message["content"],
-          "created_time": message["created_time"],
-        }).toList();
-        if (_messages.isNotEmpty) {
-          _lastId = _messages.last["id"];
-        }
-      });
-    } else {
-      throw Exception('Failed to load messages');
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _messages = data.map((message) => {
+            "id": message["id"],
+            "sender_id": message["sender_id"],
+            "receiver_id": message["receiver_id"],
+            "content": message["content"],
+            "created_time": message["created_time"],
+          }).toList();
+          if (_messages.isNotEmpty) {
+            _lastId = _messages.last["id"];
+          }
+        });
+      }
+    } catch (e) {
+      print('Error fetching messages: $e');
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    if (_controller.text.isEmpty) return;
+
+    final message = {
+      "user_id": 2,
+      "chat_id": "1:2",
+      "content": _controller.text
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://hope.ioaths.com/hope/send'),
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+        },
+        body: jsonEncode(message),
+      );
+
+      if (response.statusCode == 200) {
+        // Clear the input field
+        _controller.clear();
+        // Fetch updated messages
+        await _fetchMessages();
+      } else {
+        print('Failed to send message: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error sending message: $e');
     }
   }
 
   @override
   void initState() {
     super.initState();
-    _fetchMessages();  // Load messages when the page is first loaded
-  }
-
-  void _sendMessage() {
-    if (_controller.text.isNotEmpty) {
-      setState(() {
-        _messages.add({
-          "id": _lastId + 1,
-          "sender_id": 2,
-          "receiver_id": 1,
-          "content": _controller.text,
-          "created_time": DateTime.now().millisecondsSinceEpoch,
-        });
-        _lastId++;
-        _controller.clear();
-      });
-    }
+    _fetchMessages();
   }
 
   @override
@@ -170,19 +187,37 @@ class _ChatPageState extends State<ChatPage> {
             child: ListView.builder(
               itemCount: _messages.length,
               itemBuilder: (context, index) {
+                final message = _messages[index];
                 return ListTile(
-                  title: Text(_messages[index]["content"] ?? ''),
+                  title: Text(message["content"] ?? ''),
+                  subtitle: Text('ID: ${message["id"]}'),
+                  // Align messages based on sender
+                  trailing: message["sender_id"] == 2 
+                    ? Icon(Icons.person) 
+                    : null,
+                  leading: message["sender_id"] != 2 
+                    ? Icon(Icons.support_agent) 
+                    : null,
                 );
               },
             ),
           ),
-          TextField(
-            controller: _controller,
-            decoration: InputDecoration(hintText: 'Enter message'),
-          ),
-          IconButton(
-            icon: Icon(Icons.send),
-            onPressed: _sendMessage,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    hintText: 'Enter message',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.send),
+                onPressed: _sendMessage,
+              ),
+            ],
           ),
         ],
       ),
