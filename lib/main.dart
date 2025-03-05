@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'note.dart';
+/* import 'note_page.dart'; */
 
 void main() {
   runApp(MyApp());
@@ -287,83 +289,6 @@ class _PostSquarePageState extends State<PostSquarePage> {
   }
 }
 
-class NotePage extends StatefulWidget {
-  @override
-  _NotePageState createState() => _NotePageState();
-}
-
-class _NotePageState extends State<NotePage> {
-  List<Map<String, String>> _notes = [];
-  TextEditingController _noteController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
-
-  void _saveNote() {
-    if (_noteController.text.isNotEmpty) {
-      setState(() {
-        _notes.insert(0, {
-          "date": _selectedDate.toLocal().toString().split(' ')[0],
-          "note": _noteController.text,
-        });
-        _notes.sort((a, b) {
-          return DateTime.parse(b["date"]!).compareTo(DateTime.parse(a["date"]!));
-        });
-        _noteController.clear();
-      });
-    }
-  }
-
-  Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null && picked != _selectedDate)
-      setState(() {
-        _selectedDate = picked;
-      });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _notes.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(_notes[index]["note"] ?? ''),
-                  subtitle: Text(_notes[index]["date"] ?? ''),
-                );
-              },
-            ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.calendar_today),
-                onPressed: _selectDate,
-              ),
-              Text("${_selectedDate.toLocal()}".split(' ')[0]),
-            ],
-          ),
-          TextField(
-            controller: _noteController,
-            decoration: InputDecoration(hintText: 'Write your note'),
-          ),
-          IconButton(
-            icon: Icon(Icons.save),
-            onPressed: _saveNote,
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class SettingsPage extends StatefulWidget {
   @override
