@@ -50,14 +50,15 @@ class _MyHomePageState extends State<MyHomePage> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        selectedItemColor: Colors.blue,  // Set selected icon color
+        selectedItemColor: Colors.blue, // Set selected icon color
         unselectedItemColor: Colors.grey, // Set unselected icon color
-        showUnselectedLabels: true,  // Ensure unselected labels are visible
+        showUnselectedLabels: true, // Ensure unselected labels are visible
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
           BottomNavigationBarItem(icon: Icon(Icons.photo), label: 'Post'),
           BottomNavigationBarItem(icon: Icon(Icons.note), label: 'Notes'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );
@@ -118,19 +119,22 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _fetchMessages() async {
     try {
       final response = await http.get(
-        Uri.parse("http://hope.ioaths.com/hope/messages?chat_id=1:2&user_id=2&last_id=$_lastId"),
+        Uri.parse(
+            "http://hope.ioaths.com/hope/messages?chat_id=1:2&user_id=2&last_id=$_lastId"),
       );
 
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
         setState(() {
-          _messages = data.map((message) => {
-            "id": message["id"],
-            "sender_id": message["sender_id"],
-            "receiver_id": message["receiver_id"],
-            "content": message["content"],
-            "created_time": message["created_time"],
-          }).toList();
+          _messages = data
+              .map((message) => {
+                    "id": message["id"],
+                    "sender_id": message["sender_id"],
+                    "receiver_id": message["receiver_id"],
+                    "content": message["content"],
+                    "created_time": message["created_time"],
+                  })
+              .toList();
           if (_messages.isNotEmpty) {
             _lastId = _messages.last["id"];
           }
@@ -194,12 +198,11 @@ class _ChatPageState extends State<ChatPage> {
                   title: Text(message["content"] ?? ''),
                   subtitle: Text('ID: ${message["id"]}'),
                   // Align messages based on sender
-                  trailing: message["sender_id"] == 2 
-                    ? Icon(Icons.person) 
-                    : null,
-                  leading: message["sender_id"] != 2 
-                    ? Icon(Icons.support_agent) 
-                    : null,
+                  trailing:
+                      message["sender_id"] == 2 ? Icon(Icons.person) : null,
+                  leading: message["sender_id"] != 2
+                      ? Icon(Icons.support_agent)
+                      : null,
                 );
               },
             ),
@@ -211,7 +214,8 @@ class _ChatPageState extends State<ChatPage> {
                   controller: _controller,
                   decoration: InputDecoration(
                     hintText: 'Enter message',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                 ),
               ),
@@ -264,7 +268,8 @@ class _PostSquarePageState extends State<PostSquarePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (_posts[index]["image"] != null)
-                        Image.file(File(_posts[index]["image"]!), fit: BoxFit.cover),
+                        Image.file(File(_posts[index]["image"]!),
+                            fit: BoxFit.cover),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(_posts[index]["text"] ?? ''),
@@ -288,7 +293,6 @@ class _PostSquarePageState extends State<PostSquarePage> {
     );
   }
 }
-
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -373,8 +377,10 @@ class _SettingsPageState extends State<SettingsPage> {
           GestureDetector(
             onTap: () => _pickImage('background'),
             child: _backgroundPath.isNotEmpty
-                ? Image.file(File(_backgroundPath), width: double.infinity, height: 200, fit: BoxFit.cover)
-                : Container(color: Colors.grey, width: double.infinity, height: 200),
+                ? Image.file(File(_backgroundPath),
+                    width: double.infinity, height: 200, fit: BoxFit.cover)
+                : Container(
+                    color: Colors.grey, width: double.infinity, height: 200),
           ),
           SizedBox(height: 32),
           ElevatedButton(
