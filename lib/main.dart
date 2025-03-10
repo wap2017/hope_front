@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'note.dart';
 import 'chat.dart';
 import 'setting.dart';
+import 'post.dart';
 import 'user_profile_service.dart';
 
 void main() {
@@ -71,68 +72,68 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 
-class PostSquarePage extends StatefulWidget {
-  @override
-  _PostSquarePageState createState() => _PostSquarePageState();
-}
+// class PostSquarePage extends StatefulWidget {
+//   @override
+//   _PostSquarePageState createState() => _PostSquarePageState();
+// }
 
-class _PostSquarePageState extends State<PostSquarePage> {
-  List<Map<String, String>> _posts = [];
-  TextEditingController _postController = TextEditingController();
+// class _PostSquarePageState extends State<PostSquarePage> {
+//   List<Map<String, String>> _posts = [];
+//   TextEditingController _postController = TextEditingController();
 
-  Future<void> _pickImage(String type) async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+//   Future<void> _pickImage(String type) async {
+//     final ImagePicker _picker = ImagePicker();
+//     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
 
-    if (image != null) {
-      setState(() {
-        _posts.insert(0, {"image": image.path, "text": _postController.text});
-        _postController.clear();
-      });
-    }
-  }
+//     if (image != null) {
+//       setState(() {
+//         _posts.insert(0, {"image": image.path, "text": _postController.text});
+//         _postController.clear();
+//       });
+//     }
+//   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _posts.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  margin: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_posts[index]["image"] != null)
-                        Image.file(File(_posts[index]["image"]!),
-                            fit: BoxFit.cover),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(_posts[index]["text"] ?? ''),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          TextField(
-            controller: _postController,
-            decoration: InputDecoration(hintText: 'Write a post'),
-          ),
-          IconButton(
-            icon: Icon(Icons.photo),
-            onPressed: () => _pickImage('image'),
-          ),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: const EdgeInsets.all(8.0),
+//       child: Column(
+//         children: [
+//           Expanded(
+//             child: ListView.builder(
+//               itemCount: _posts.length,
+//               itemBuilder: (context, index) {
+//                 return Card(
+//                   margin: EdgeInsets.symmetric(vertical: 8.0),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       if (_posts[index]["image"] != null)
+//                         Image.file(File(_posts[index]["image"]!),
+//                             fit: BoxFit.cover),
+//                       Padding(
+//                         padding: const EdgeInsets.all(8.0),
+//                         child: Text(_posts[index]["text"] ?? ''),
+//                       ),
+//                     ],
+//                   ),
+//                 );
+//               },
+//             ),
+//           ),
+//           TextField(
+//             controller: _postController,
+//             decoration: InputDecoration(hintText: 'Write a post'),
+//           ),
+//           IconButton(
+//             icon: Icon(Icons.photo),
+//             onPressed: () => _pickImage('image'),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 class AuthWrapper extends StatefulWidget {
   @override

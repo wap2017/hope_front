@@ -302,7 +302,7 @@ class _NotePageState extends State<NotePage> {
       final response = await _httpClient.get(
         Uri.parse("$_baseUrl/notes"),
         headers: {
-          'X-User-ID': '1', // Replace with actual user authentication
+          // 'X-User-ID': '1', // Replace with actual user authentication
           'Content-Type': 'application/json',
 		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
         },
