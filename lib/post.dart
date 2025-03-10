@@ -388,7 +388,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
       final response = await _httpClient.post(
         Uri.parse(url),
         headers: {
-          'Authorization': 'Bearer $token',
+		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
           'Content-Type': 'application/json',
         },
       );
@@ -457,7 +457,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
       final response = await _httpClient.delete(
         Uri.parse('$_baseUrl/posts/$postId'),
         headers: {
-          'Authorization': 'Bearer $token',
+		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
           'Content-Type': 'application/json',
         },
       );
@@ -777,7 +777,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
     if (path.startsWith('http')) {
       return path;
     }
-    return '$_baseUrl/uploads/$path';
+    return '$_baseUrl/file/$path';
   }
 
   String _formatDate(int timestamp) {
