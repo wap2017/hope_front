@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
+import 'user_profile_service.dart';
+
 
 // Custom HTTP client wrapper with logging
 class LoggingHttpClient {
@@ -302,6 +304,7 @@ class _NotePageState extends State<NotePage> {
         headers: {
           'X-User-ID': '1', // Replace with actual user authentication
           'Content-Type': 'application/json',
+		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
         },
       );
 
@@ -364,6 +367,7 @@ class _NotePageState extends State<NotePage> {
         headers: {
           'X-User-ID': '1', // Replace with actual user authentication
           'Content-Type': 'application/json',
+		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
         },
         body: jsonEncode({
           'note_date': dateString,

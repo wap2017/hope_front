@@ -1,0 +1,202 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class UserProfile {
+  final int id;
+  final String patientName;
+  final String relationshipToPatient;
+  final String illnessCause;
+  final String chatBackground;
+  final String userAvatar;
+  final String userNickname;
+  final String mobileNumber;
+
+  UserProfile({
+    required this.id,
+    required this.patientName,
+    required this.relationshipToPatient,
+    required this.illnessCause,
+    required this.chatBackground,
+    required this.userAvatar,
+    required this.userNickname,
+    required this.mobileNumber,
+  });
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      id: json['id'] ?? 0,
+      patientName: json['patient_name'] ?? '',
+      relationshipToPatient: json['relationship_to_patient'] ?? '',
+      illnessCause: json['illness_cause'] ?? '',
+      chatBackground: json['chat_background'] ?? '',
+      userAvatar: json['user_avatar'] ?? '',
+      userNickname: json['user_nickname'] ?? '',
+      mobileNumber: json['mobile_number'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_name': patientName,
+      'relationship_to_patient': relationshipToPatient,
+      'illness_cause': illnessCause,
+      'chat_background': chatBackground,
+      'user_avatar': userAvatar,
+      'user_nickname': userNickname,
+      'mobile_number': mobileNumber,
+    };
+  }
+}
+
+class UserProfileService {
+  static const String _userProfileKey = 'user_profile';
+  static const String _apiBaseUrl = 'http://hope.ioaths.com/hope';
+  static UserProfile? _cachedProfile;
+  static String? _authToken;
+
+  // Set authentication token
+  static void setAuthToken(String token){
+   _authToken = token;
+  }
+
+  //Get current authentication token
+  static String? getAuthToken(){
+    return _authToken;
+  }
+
+  // Fetch user profile from API and save locally
+  static Future<UserProfile?> fetchAndSaveProfile(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_apiBaseUrl/user/profile?id=$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final profile = UserProfile.fromJson(data['data']);
+          await _saveProfileLocally(profile);
+          _cachedProfile = profile;
+          return profile;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      return null;
+    }
+  }
+
+  // Get profile from local storage
+  static Future<UserProfile?> getProfile() async {
+    print("getProfile");
+    if (_cachedProfile != null) {
+      return _cachedProfile;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final profileString = prefs.getString(_userProfileKey);
+      print("profileString, $profileString");
+      
+      if (profileString != null) {
+        final profileJson = jsonDecode(profileString);
+        _cachedProfile = UserProfile.fromJson(profileJson);
+        print("_cachedProfile, $_cachedProfile");
+        return _cachedProfile;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting profile from local storage: $e');
+      return null;
+    }
+  }
+
+  // Save profile to local storage
+  static Future<bool> _saveProfileLocally(UserProfile profile) async {
+    print("_saveProfileLocally $profile");
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final profileJson = jsonEncode(profile.toJson());
+      return await prefs.setString(_userProfileKey, profileJson);
+    } catch (e) {
+      print('Error saving profile to local storage: $e');
+      return false;
+    }
+  }
+
+  // Update profile via API and save locally
+  static Future<bool> updateProfile(UserProfile updatedProfile) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_apiBaseUrl/user/update_settings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+        },
+        body: jsonEncode(updatedProfile.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          await _saveProfileLocally(updatedProfile);
+          _cachedProfile = updatedProfile;
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error updating profile: $e');
+      return false;
+    }
+  }
+
+// Login method
+  static Future<UserProfile?> login(String mobileNumber, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_apiBaseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'mobile_number': mobileNumber,
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          setAuthToken(data['data']['token']);
+          final profile = UserProfile.fromJson(data['data']['profile']);
+          await _saveProfileLocally(profile);
+          _cachedProfile = profile;
+          return profile;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Login error: $e');
+      return null;
+    }
+  }
+
+
+		// Add this method to the UserProfileService class
+		static void clearCache() {
+		  _cachedProfile = null;
+		  _authToken = null;
+		  // Clear local storage
+		  SharedPreferences.getInstance().then((prefs) {
+			prefs.remove(_userProfileKey);
+		  });
+		}
+
+}

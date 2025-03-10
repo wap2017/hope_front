@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'note.dart';
-/* import 'note_page.dart'; */
+import 'chat.dart';
+import 'setting.dart';
+import 'user_profile_service.dart';
 
 void main() {
   runApp(MyApp());
@@ -15,8 +17,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter App',
-      home: MyHomePage(),
+      // title: 'Flutter App',
+      // home: MyHomePage(),
+      title: 'Hope App',
+      home: AuthWrapper(),
+
     );
   }
 }
@@ -65,171 +70,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-class ChatPage extends StatefulWidget {
-  @override
-  _ChatPageState createState() => _ChatPageState();
-}
-
-// class _ChatPageState extends State<ChatPage> {
-//   TextEditingController _controller = TextEditingController();
-//   List<String> _messages = [];
-//
-//   void _sendMessage() {
-//     if (_controller.text.isNotEmpty) {
-//       setState(() {
-//         _messages.add(_controller.text);
-//         _controller.clear();
-//       });
-//     }
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.all(8.0),
-//       child: Column(
-//         children: [
-//           Expanded(
-//             child: ListView.builder(
-//               itemCount: _messages.length,
-//               itemBuilder: (context, index) {
-//                 return ListTile(title: Text(_messages[index]));
-//               },
-//             ),
-//           ),
-//           TextField(
-//             controller: _controller,
-//             decoration: InputDecoration(hintText: 'Enter message'),
-//           ),
-//           IconButton(
-//             icon: Icon(Icons.send),
-//             onPressed: _sendMessage,
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-class _ChatPageState extends State<ChatPage> {
-  TextEditingController _controller = TextEditingController();
-  List<Map<String, dynamic>> _messages = [];
-  int _lastId = 0;
-
-  Future<void> _fetchMessages() async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-            "http://hope.ioaths.com/hope/messages?chat_id=1:2&user_id=2&last_id=$_lastId"),
-      );
-
-      if (response.statusCode == 200) {
-        List<dynamic> data = jsonDecode(response.body);
-        setState(() {
-          _messages = data
-              .map((message) => {
-                    "id": message["id"],
-                    "sender_id": message["sender_id"],
-                    "receiver_id": message["receiver_id"],
-                    "content": message["content"],
-                    "created_time": message["created_time"],
-                  })
-              .toList();
-          if (_messages.isNotEmpty) {
-            _lastId = _messages.last["id"];
-          }
-        });
-      }
-    } catch (e) {
-      print('Error fetching messages: $e');
-    }
-  }
-
-  Future<void> _sendMessage() async {
-    if (_controller.text.isEmpty) return;
-
-    final message = {
-      "user_id": 2,
-      "chat_id": "1:2",
-      "content": _controller.text
-    };
-
-    try {
-      final response = await http.post(
-        Uri.parse('http://hope.ioaths.com/hope/send'),
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
-        },
-        body: jsonEncode(message),
-      );
-
-      if (response.statusCode == 200) {
-        // Clear the input field
-        _controller.clear();
-        // Fetch updated messages
-        await _fetchMessages();
-      } else {
-        print('Failed to send message: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error sending message: $e');
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchMessages();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return ListTile(
-                  title: Text(message["content"] ?? ''),
-                  subtitle: Text('ID: ${message["id"]}'),
-                  // Align messages based on sender
-                  trailing:
-                      message["sender_id"] == 2 ? Icon(Icons.person) : null,
-                  leading: message["sender_id"] != 2
-                      ? Icon(Icons.support_agent)
-                      : null,
-                );
-              },
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: 'Enter message',
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.send),
-                onPressed: _sendMessage,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class PostSquarePage extends StatefulWidget {
   @override
@@ -294,101 +134,99 @@ class _PostSquarePageState extends State<PostSquarePage> {
   }
 }
 
-class SettingsPage extends StatefulWidget {
+class AuthWrapper extends StatefulWidget {
   @override
-  _SettingsPageState createState() => _SettingsPageState();
+  _AuthWrapperState createState() => _AuthWrapperState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
-  TextEditingController _nicknameController = TextEditingController();
-  TextEditingController _descriptionController = TextEditingController();
-  String _avatarPath = '';
-  String _backgroundPath = '';
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isAuthenticated = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _checkAuthentication();
   }
 
-  _loadSettings() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  Future<void> _checkAuthentication() async {
+    final profile = await UserProfileService.getProfile();
     setState(() {
-      _nicknameController.text = prefs.getString('nickname') ?? '';
-      _descriptionController.text = prefs.getString('description') ?? '';
-      _avatarPath = prefs.getString('avatarPath') ?? '';
-      _backgroundPath = prefs.getString('backgroundPath') ?? '';
+      print("setStateBefore");
+      print("$profile");
+      print("setStateAfter");
+      _isAuthenticated = profile != null;
     });
   }
 
-  _saveSettings() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('nickname', _nicknameController.text);
-    prefs.setString('description', _descriptionController.text);
-    prefs.setString('avatarPath', _avatarPath);
-    prefs.setString('backgroundPath', _backgroundPath);
+  @override
+  Widget build(BuildContext context) {
+    print("hello");
+    print(_isAuthenticated);
+    print("hello2");
+    return _isAuthenticated ? MyHomePage() : LoginPage();
   }
+}
 
-  Future<void> _pickImage(String type) async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
 
-    if (image != null) {
-      setState(() {
-        if (type == 'avatar') {
-          _avatarPath = image.path;
-        } else {
-          _backgroundPath = image.path;
-        }
-      });
-      _saveSettings();
+
+
+class LoginPage extends StatefulWidget {
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _mobileController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  Future<void> _login() async {
+    final profile = await UserProfileService.login(
+      _mobileController.text, 
+      _passwordController.text
+    );
+
+    if (profile != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => MyHomePage())
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed'),
+          backgroundColor: Colors.red,
+        )
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Avatar'),
-          GestureDetector(
-            onTap: () => _pickImage('avatar'),
-            child: _avatarPath.isNotEmpty
-                ? Image.file(File(_avatarPath), width: 100, height: 100)
-                : Container(color: Colors.grey, width: 100, height: 100),
-          ),
-          SizedBox(height: 16),
-          Text('Nickname'),
-          TextField(
-            controller: _nicknameController,
-            decoration: InputDecoration(hintText: 'Enter nickname'),
-          ),
-          SizedBox(height: 16),
-          Text('Description'),
-          TextField(
-            controller: _descriptionController,
-            decoration: InputDecoration(hintText: 'Enter description'),
-            maxLines: 3,
-          ),
-          SizedBox(height: 16),
-          Text('Background Picture'),
-          GestureDetector(
-            onTap: () => _pickImage('background'),
-            child: _backgroundPath.isNotEmpty
-                ? Image.file(File(_backgroundPath),
-                    width: double.infinity, height: 200, fit: BoxFit.cover)
-                : Container(
-                    color: Colors.grey, width: double.infinity, height: 200),
-          ),
-          SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _saveSettings,
-            child: Text('Save Settings'),
-          ),
-        ],
+    return Scaffold(
+      appBar: AppBar(title: Text('Login')),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              controller: _mobileController,
+              decoration: InputDecoration(labelText: 'Mobile Number'),
+              keyboardType: TextInputType.phone,
+            ),
+            TextField(
+              controller: _passwordController,
+              decoration: InputDecoration(labelText: 'Password'),
+              obscureText: true,
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _login,
+              child: Text('Login'),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
