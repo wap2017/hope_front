@@ -150,13 +150,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkAuthentication() async {
-    // final profile = await UserProfileService.getProfile();
-    final String? token = await UserProfileService.getAuthToken();
+    final String? token = await UserProfileService.getAuthToken(); 
     setState(() {
-      print("setStateBefore");
-      // print("$profile");
-      print("setStateAfter");
-      // _isAuthenticated = profile != null;
+      /* _isAuthenticated = profile != null; */
       _isAuthenticated = token !=null && token.isNotEmpty;
     });
   }

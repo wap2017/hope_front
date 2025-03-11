@@ -42,6 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
       // If not available locally, fetch from API
       if (profile == null) {
         profile = await UserProfileService.fetchAndSaveProfile(_userId);
+        // TODO 是否要跳到登录页
       }
       
       if (profile != null) {
@@ -373,6 +374,7 @@ Future<void> _login() async {
         SnackBar(content: Text('Login successful')),
       );
       _fetchUserSettings();
+       //TODO 这里是不是要存到shared_preferences
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

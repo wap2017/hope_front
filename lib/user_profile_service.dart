@@ -52,7 +52,8 @@ class UserProfile {
 }
 
 class UserProfileService {
-  static const String _userProfileKey = 'user_profile';
+  static const String _userProfileKey = 'user_profile'; 
+  static const String _authTokenKey = 'auth_token';
   static const String _apiBaseUrl = 'http://hope.ioaths.com/hope';
   static UserProfile? _cachedProfile;
   static String? _authToken;
@@ -62,10 +63,32 @@ class UserProfileService {
    _authToken = token;
   }
 
-  //Get current authentication token
-  static String? getAuthToken(){
-    return _authToken;
-  }
+		/* static String? getAuthToken() { */
+		/*   // If the token is already in memory, return it immediately */
+		/*   return _authToken; */
+		/* } */
+   
+  
+		// Recommended async method for token retrieval
+		static Future<String?> getAuthToken() async {
+		  // If the token is already in memory, return it immediately
+		  if (_authToken != null && _authToken!.isNotEmpty) {
+			return _authToken;
+		  }
+
+		  // Asynchronously retrieve the token from SharedPreferences
+		  final prefs = await SharedPreferences.getInstance();
+		  final String? storedToken = prefs.getString(_authTokenKey);
+
+		  // Update the in-memory token if a valid token is found
+		  if (storedToken != null && storedToken.isNotEmpty) {
+			_authToken = storedToken;
+			return _authToken;
+		  }
+
+		  // Return null if no token is found
+		  return null;
+		}
 
   // Fetch user profile from API and save locally
   static Future<UserProfile?> fetchAndSaveProfile(int userId) async {
@@ -94,6 +117,7 @@ class UserProfileService {
     }
   }
 
+
   // Get profile from local storage
   static Future<UserProfile?> getProfile() async {
     print("getProfile");
@@ -116,6 +140,19 @@ class UserProfileService {
     } catch (e) {
       print('Error getting profile from local storage: $e');
       return null;
+    }
+  }
+
+  // Save token to local storage
+  static Future<bool> _saveAuthTokenLocally(String? token) async {
+    print("_saveAuthTokenLocally $token");
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      /* final profileJson = jsonEncode(profile.toJson()); */
+      return await prefs.setString(_authTokenKey, token??'');
+    } catch (e) {
+      print('Error saving auth token to local storage: $e');
+      return false;
     }
   }
 
@@ -175,6 +212,7 @@ class UserProfileService {
         final data = jsonDecode(response.body);
         if (data['success'] == true && data['data'] != null) {
           setAuthToken(data['data']['token']);
+          await _saveAuthTokenLocally(data['data']['token']);
           final profile = UserProfile.fromJson(data['data']['profile']);
           await _saveProfileLocally(profile);
           _cachedProfile = profile;
@@ -197,6 +235,10 @@ class UserProfileService {
 		  SharedPreferences.getInstance().then((prefs) {
 			prefs.remove(_userProfileKey);
 		  });
+          SharedPreferences.getInstance().then((prefs) {
+			prefs.remove(_authTokenKey);
+		  });
+
 		}
 
 }

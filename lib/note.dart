@@ -299,12 +299,13 @@ class _NotePageState extends State<NotePage> {
     try {
       developer.log('Fetching all notes', name: 'NotePage');
 
+      final token = await UserProfileService.getAuthToken();
       final response = await _httpClient.get(
         Uri.parse("$_baseUrl/notes"),
         headers: {
           // 'X-User-ID': '1', // Replace with actual user authentication
           'Content-Type': 'application/json',
-		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
+		  'Authorization': 'Bearer ${token}',
         },
       );
 

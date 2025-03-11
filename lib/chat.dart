@@ -6,6 +6,7 @@ import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 
 
+// 这个StatefulWidget好像看上去还挺常用的
 class ChatPage extends StatefulWidget {
   @override
   _ChatPageState createState() => _ChatPageState();
@@ -36,6 +37,7 @@ class _ChatPageState extends State<ChatPage> {
         });
       } else {
         // If not in local storage, fetch from API (assuming user ID 2)
+        // TODO 这里不能写死2哦, 这里其实要跳到登录页?
         final fetchedProfile = await UserProfileService.fetchAndSaveProfile(2);
         if (fetchedProfile != null) {
           setState(() {
