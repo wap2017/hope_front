@@ -63,6 +63,12 @@ class UserProfileService {
    _authToken = token;
   }
 
+
+   static String get apiBaseUrl{
+     return _apiBaseUrl;
+   }
+
+
 		/* static String? getAuthToken() { */
 		/*   // If the token is already in memory, return it immediately */
 		/*   return _authToken; */

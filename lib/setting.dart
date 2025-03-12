@@ -6,7 +6,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user_profile_service.dart';
 import 'main.dart';
-
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -109,81 +110,289 @@ class _SettingsPageState extends State<SettingsPage> {
     print(message);
   }
 
+  // Method to handle avatar image selection and upload
   Future<void> _changeAvatar() async {
-    // This would typically upload the image to your server
-    // For now, we'll just demonstrate with URL changing
+    final ImagePicker picker = ImagePicker();
+    
+    // Display option dialog for camera or gallery
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Change Avatar'),
-        content: TextField(
-          decoration: InputDecoration(hintText: 'Enter new avatar URL'),
-          onChanged: (value) => _avatarUrl = value,
-          controller: TextEditingController(text: _avatarUrl),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('Change Avatar'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                GestureDetector(
+                  child: Text('Take a picture'),
+                  onTap: () {
+                    Navigator.of(dialogContext).pop();
+                    _getAvatarImage(ImageSource.camera);
+                  },
+                ),
+                Padding(padding: EdgeInsets.all(8.0)),
+                GestureDetector(
+                  child: Text('Select from gallery'),
+                  onTap: () {
+                    Navigator.of(dialogContext).pop();
+                    _getAvatarImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
           ),
-          TextButton(
-            onPressed: () {
-              setState(() {});
-              Navigator.pop(context);
-            },
-            child: Text('Update'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Future<void> _changeBackground() async {
-    // This would typically upload the image to your server
-    // For now, we'll just demonstrate with URL changing
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Change Background'),
-        content: TextField(
-          decoration: InputDecoration(hintText: 'Enter new background URL'),
-          onChanged: (value) => _backgroundUrl = value,
-          controller: TextEditingController(text: _backgroundUrl),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {});
-              Navigator.pop(context);
-            },
-            child: Text('Update'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  // Original image picking method kept for reference
-  // Can be modified to upload images to server
-  Future<void> _pickImage(String type) async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+  // Method to pick and upload avatar image
+  Future<void> _getAvatarImage(ImageSource source) async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
 
-    if (image != null) {
-      // Here you would upload the image to your server and get back a URL
-      // For now we'll just pretend we got a URL back
-      setState(() {
-        if (type == 'avatar') {
-          _avatarUrl = 'https://example.com/uploaded/avatar.jpg';
+      if (pickedFile != null) {
+        // Upload the image to server
+        final String? newAvatarUrl = await _uploadFile(
+          File(pickedFile.path), 
+          'avatar'
+        );
+        
+        if (newAvatarUrl != null) {
+          setState(() {
+            _avatarUrl = newAvatarUrl;
+          });
+          
+          // Save the updated avatar URL through UserProfileService
+          final profile = await UserProfileService.getProfile();
+          if (profile != null) {
+            final updatedProfile = UserProfile(
+              id: profile.id,
+              patientName: profile.patientName ?? '',
+              relationshipToPatient: profile.relationshipToPatient ?? '',
+              illnessCause: profile.illnessCause ?? '',
+              chatBackground: profile.chatBackground ?? '',
+              userAvatar: newAvatarUrl,
+              userNickname: profile.userNickname ?? '',
+              mobileNumber: profile.mobileNumber ?? '',
+            );
+            
+            await UserProfileService.updateProfile(updatedProfile);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Avatar updated successfully')),
+            );
+          }
         } else {
-          _backgroundUrl = 'https://example.com/uploaded/background.jpg';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to upload avatar image'), backgroundColor: Colors.red),
+          );
         }
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error selecting image: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
+  }
+
+  // Method to handle background image selection and upload
+  Future<void> _changeBackground() async {
+    final ImagePicker picker = ImagePicker();
+    
+    // Display option dialog for camera or gallery
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('Change Background'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                GestureDetector(
+                  child: Text('Take a picture'),
+                  onTap: () {
+                    Navigator.of(dialogContext).pop();
+                    _getBackgroundImage(ImageSource.camera);
+                  },
+                ),
+                Padding(padding: EdgeInsets.all(8.0)),
+                GestureDetector(
+                  child: Text('Select from gallery'),
+                  onTap: () {
+                    Navigator.of(dialogContext).pop();
+                    _getBackgroundImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Method to pick and upload background image
+  Future<void> _getBackgroundImage(ImageSource source) async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        // Upload the image to server
+        final String? newBackgroundUrl = await _uploadFile(
+          File(pickedFile.path), 
+          'background'
+        );
+        
+        if (newBackgroundUrl != null) {
+          setState(() {
+            _backgroundUrl = newBackgroundUrl;
+          });
+          
+          // Save the updated background URL through UserProfileService
+          final profile = await UserProfileService.getProfile();
+          if (profile != null) {
+            final updatedProfile = UserProfile(
+              id: profile.id,
+              patientName: profile.patientName ?? '',
+              relationshipToPatient: profile.relationshipToPatient ?? '',
+              illnessCause: profile.illnessCause ?? '',
+              chatBackground: newBackgroundUrl,
+              userAvatar: profile.userAvatar ?? '',
+              userNickname: profile.userNickname ?? '',
+              mobileNumber: profile.mobileNumber ?? '',
+            );
+            
+            await UserProfileService.updateProfile(updatedProfile);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Background updated successfully')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to upload background image'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error selecting image: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Method to upload a file to the server
+  Future<String?> _uploadFile(File file, String type) async {
+    try {
+      // Get the token for authorization
+      final prefs = await SharedPreferences.getInstance();
+      final token = await UserProfileService.getAuthToken();
+      print("----");
+      print(token);
+      print(type);
+      print("----");
+      
+      // Create multipart request
+      final url = Uri.parse('http://hope.ioaths.com/hope/user/upload?type=$type');
+      var request = http.MultipartRequest('POST', url);
+      
+      // Add authorization header
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+      
+      // Get file extension
+      final fileExtension = path.extension(file.path).replaceAll('.', '');
+      
+      // Add file to request
+      final multipartFile = await http.MultipartFile.fromPath(
+        'file',  // field name that the server expects
+        file.path,
+        contentType: MediaType('image', fileExtension),
+      );
+      request.files.add(multipartFile);
+      
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true && responseData['data'] != null) {
+          // Return the URL of the uploaded file
+          return responseData['data']['file_url'];
+        }
+      }
+      
+      print('Upload failed with status: ${response.statusCode}, response: ${response.body}');
+      return null;
+    } catch (e) {
+      print('Error uploading file: $e');
+      return null;
+    }
+  }
+
+  Future<void> _login() async {
+    // Implement login dialog or screen
+    final mobileNumber = _mobileNumberController.text;
+    final password = ''; // You'll want a password field
+
+    final profile = await UserProfileService.login(mobileNumber, password);
+    
+    if (profile != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login successful')),
+      );
+      _fetchUserSettings();
+       //TODO 这里是不是要存到shared_preferences
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Inside the _SettingsPageState class
+  Future<void> _logout() async {
+    // Clear the stored profile and token
+    UserProfileService.clearCache();
+    // Navigate to the login page and remove all previous routes
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => LoginPage()),
+      (route) => false
+    );
   }
 
   @override
@@ -346,56 +555,33 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-		 // In the build method, add this near the bottom of the Column children
-		Center(
-		  child: ElevatedButton(
-			onPressed: _logout,
-			style: ElevatedButton.styleFrom(
-			  backgroundColor: Colors.red, // Optional: make it stand out
-			),
-			child: Text('Logout'),
-		  ),
-		),
+          // In the build method, add this near the bottom of the Column children
+          Center(
+            child: ElevatedButton(
+              onPressed: _logout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, // Optional: make it stand out
+              ),
+              child: Text('Logout'),
+            ),
+          ),
         ],
       ),
     );
   }
-
-
-Future<void> _login() async {
-    // Implement login dialog or screen
-    final mobileNumber = _mobileNumberController.text;
-    final password = ''; // You'll want a password field
-
-    final profile = await UserProfileService.login(mobileNumber, password);
-    
-    if (profile != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login successful')),
-      );
-      _fetchUserSettings();
-       //TODO 这里是不是要存到shared_preferences
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-		// Inside the _SettingsPageState class
-		Future<void> _logout() async {
-		  // Clear the stored profile and token
-		  UserProfileService.clearCache();
-		  // Navigate to the login page and remove all previous routes
-		  Navigator.of(context).pushAndRemoveUntil(
-			MaterialPageRoute(builder: (_) => LoginPage()),
-			(route) => false
-		  );
-		}
-
 }
 
-
+class LoginPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // Implement your login page here
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Login'),
+      ),
+      body: Center(
+        child: Text('Login Page'),
+      ),
+    );
+  }
+}
