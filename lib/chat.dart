@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 
-
 // 这个StatefulWidget好像看上去还挺常用的
 class ChatPage extends StatefulWidget {
   @override
@@ -30,7 +29,7 @@ class _ChatPageState extends State<ChatPage> {
     try {
       // First try to get from local storage
       final profile = await UserProfileService.getProfile();
-      
+
       if (profile != null) {
         setState(() {
           _backgroundUrl = profile.chatBackground;
@@ -55,20 +54,21 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _fetchMessages() async {
+    final token = await UserProfileService.getAuthToken();
     try {
       final response = await http.get(
         Uri.parse(
             "http://hope.ioaths.com/hope/messages?chat_id=1:2&user_id=2&last_id=$_lastId"),
-			headers: {
-				  'Content-Type': 'application/json',
-				  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
-		   },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${token}',
+        },
       );
 
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
         setState(() {
-          _messages = data
+          final newMessages = data
               .map((message) => {
                     "id": message["id"],
                     "sender_id": message["sender_id"],
@@ -77,6 +77,7 @@ class _ChatPageState extends State<ChatPage> {
                     "created_time": message["created_time"],
                   })
               .toList();
+          _messages.addAll(newMessages);
           if (_messages.isNotEmpty) {
             _lastId = _messages.last["id"];
           }
@@ -97,11 +98,12 @@ class _ChatPageState extends State<ChatPage> {
     };
 
     try {
+      final token = await UserProfileService.getAuthToken();
       final response = await http.post(
         Uri.parse('http://hope.ioaths.com/hope/send'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
+          'Authorization': 'Bearer ${token}',
         },
         body: jsonEncode(message),
       );
@@ -143,7 +145,7 @@ class _ChatPageState extends State<ChatPage> {
                       itemBuilder: (context, index) {
                         final message = _messages[index];
                         final bool isUserMessage = message["sender_id"] == 2;
-                        
+
                         return Align(
                           alignment: isUserMessage
                               ? Alignment.centerRight
@@ -181,13 +183,13 @@ class _ChatPageState extends State<ChatPage> {
                                   ),
                                 ),
                                 SizedBox(height: 4),
-                                Text(
-                                  'ID: ${message["id"]}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.black54,
-                                  ),
-                                ),
+                                // Text(
+                                //   'ID: ${message["id"]}',
+                                //   style: TextStyle(
+                                //     fontSize: 12,
+                                //     color: Colors.black54,
+                                //   ),
+                                // ),
                               ],
                             ),
                           ),

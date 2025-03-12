@@ -39,13 +39,13 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       // First try to get from local storage
       UserProfile? profile = await UserProfileService.getProfile();
-      
+
       // If not available locally, fetch from API
       if (profile == null) {
         profile = await UserProfileService.fetchAndSaveProfile(_userId);
         // TODO 是否要跳到登录页
       }
-      
+
       if (profile != null) {
         setState(() {
           _nicknameController.text = profile?.userNickname ?? '';
@@ -113,7 +113,7 @@ class _SettingsPageState extends State<SettingsPage> {
   // Method to handle avatar image selection and upload
   Future<void> _changeAvatar() async {
     final ImagePicker picker = ImagePicker();
-    
+
     // Display option dialog for camera or gallery
     showDialog(
       context: context,
@@ -151,7 +151,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? pickedFile = await picker.pickImage(
@@ -163,16 +163,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (pickedFile != null) {
         // Upload the image to server
-        final String? newAvatarUrl = await _uploadFile(
-          File(pickedFile.path), 
-          'avatar'
-        );
-        
+        final String? newAvatarUrl =
+            await _uploadFile(File(pickedFile.path), 'avatar');
+
         if (newAvatarUrl != null) {
           setState(() {
             _avatarUrl = newAvatarUrl;
           });
-          
+
           // Save the updated avatar URL through UserProfileService
           final profile = await UserProfileService.getProfile();
           if (profile != null) {
@@ -186,7 +184,7 @@ class _SettingsPageState extends State<SettingsPage> {
               userNickname: profile.userNickname ?? '',
               mobileNumber: profile.mobileNumber ?? '',
             );
-            
+
             await UserProfileService.updateProfile(updatedProfile);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Avatar updated successfully')),
@@ -194,14 +192,18 @@ class _SettingsPageState extends State<SettingsPage> {
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to upload avatar image'), backgroundColor: Colors.red),
+            SnackBar(
+                content: Text('Failed to upload avatar image'),
+                backgroundColor: Colors.red),
           );
         }
       }
     } catch (e) {
       print('Error picking image: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error selecting image: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Error selecting image: $e'),
+            backgroundColor: Colors.red),
       );
     } finally {
       setState(() {
@@ -213,7 +215,7 @@ class _SettingsPageState extends State<SettingsPage> {
   // Method to handle background image selection and upload
   Future<void> _changeBackground() async {
     final ImagePicker picker = ImagePicker();
-    
+
     // Display option dialog for camera or gallery
     showDialog(
       context: context,
@@ -251,7 +253,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? pickedFile = await picker.pickImage(
@@ -263,16 +265,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (pickedFile != null) {
         // Upload the image to server
-        final String? newBackgroundUrl = await _uploadFile(
-          File(pickedFile.path), 
-          'background'
-        );
-        
+        final String? newBackgroundUrl =
+            await _uploadFile(File(pickedFile.path), 'background');
+
         if (newBackgroundUrl != null) {
           setState(() {
             _backgroundUrl = newBackgroundUrl;
           });
-          
+
           // Save the updated background URL through UserProfileService
           final profile = await UserProfileService.getProfile();
           if (profile != null) {
@@ -286,7 +286,7 @@ class _SettingsPageState extends State<SettingsPage> {
               userNickname: profile.userNickname ?? '',
               mobileNumber: profile.mobileNumber ?? '',
             );
-            
+
             await UserProfileService.updateProfile(updatedProfile);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Background updated successfully')),
@@ -294,14 +294,18 @@ class _SettingsPageState extends State<SettingsPage> {
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to upload background image'), backgroundColor: Colors.red),
+            SnackBar(
+                content: Text('Failed to upload background image'),
+                backgroundColor: Colors.red),
           );
         }
       }
     } catch (e) {
       print('Error picking image: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error selecting image: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Error selecting image: $e'),
+            backgroundColor: Colors.red),
       );
     } finally {
       setState(() {
@@ -320,31 +324,32 @@ class _SettingsPageState extends State<SettingsPage> {
       print(token);
       print(type);
       print("----");
-      
+
       // Create multipart request
-      final url = Uri.parse('http://hope.ioaths.com/hope/user/upload?type=$type');
+      final url =
+          Uri.parse('http://hope.ioaths.com/hope/user/upload?type=$type');
       var request = http.MultipartRequest('POST', url);
-      
+
       // Add authorization header
       request.headers.addAll({
         'Authorization': 'Bearer $token',
       });
-      
+
       // Get file extension
       final fileExtension = path.extension(file.path).replaceAll('.', '');
-      
+
       // Add file to request
       final multipartFile = await http.MultipartFile.fromPath(
-        'file',  // field name that the server expects
+        'file', // field name that the server expects
         file.path,
         contentType: MediaType('image', fileExtension),
       );
       request.files.add(multipartFile);
-      
+
       // Send request
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         if (responseData['success'] == true && responseData['data'] != null) {
@@ -352,8 +357,9 @@ class _SettingsPageState extends State<SettingsPage> {
           return responseData['data']['file_url'];
         }
       }
-      
-      print('Upload failed with status: ${response.statusCode}, response: ${response.body}');
+
+      print(
+          'Upload failed with status: ${response.statusCode}, response: ${response.body}');
       return null;
     } catch (e) {
       print('Error uploading file: $e');
@@ -367,13 +373,13 @@ class _SettingsPageState extends State<SettingsPage> {
     final password = ''; // You'll want a password field
 
     final profile = await UserProfileService.login(mobileNumber, password);
-    
+
     if (profile != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login successful')),
       );
       _fetchUserSettings();
-       //TODO 这里是不是要存到shared_preferences
+      //TODO 这里是不是要存到shared_preferences
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -390,9 +396,7 @@ class _SettingsPageState extends State<SettingsPage> {
     UserProfileService.clearCache();
     // Navigate to the login page and remove all previous routes
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => LoginPage()),
-      (route) => false
-    );
+        MaterialPageRoute(builder: (_) => LoginPage()), (route) => false);
   }
 
   @override
@@ -400,15 +404,16 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_isLoading) {
       return Center(child: CircularProgressIndicator());
     }
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Profile Information', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text('Profile Information',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 16),
-          
+
           Row(
             children: [
               Column(
@@ -421,17 +426,17 @@ class _SettingsPageState extends State<SettingsPage> {
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(50),
                             child: Image.network(
-                              _avatarUrl, 
-                              width: 100, 
+                              _avatarUrl,
+                              width: 100,
                               height: 100,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => 
-                                Container(
-                                  width: 100, 
-                                  height: 100, 
-                                  color: Colors.grey,
-                                  child: Icon(Icons.error),
-                                ),
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.grey,
+                                child: Icon(Icons.error),
+                              ),
                             ),
                           )
                         : Container(
@@ -439,7 +444,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               color: Colors.grey[300],
                               borderRadius: BorderRadius.circular(50),
                             ),
-                            width: 100, 
+                            width: 100,
                             height: 100,
                             child: Icon(Icons.person, size: 50),
                           ),
@@ -457,7 +462,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       decoration: InputDecoration(
                         hintText: 'Enter nickname',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                     ),
                     SizedBox(height: 12),
@@ -467,7 +473,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       decoration: InputDecoration(
                         hintText: 'Enter mobile number',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                       keyboardType: TextInputType.phone,
                     ),
@@ -476,11 +483,12 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
-          
+
           SizedBox(height: 24),
-          Text('Patient Information', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text('Patient Information',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 16),
-          
+
           Text('Patient Name'),
           TextField(
             controller: _patientNameController,
@@ -489,7 +497,7 @@ class _SettingsPageState extends State<SettingsPage> {
               border: OutlineInputBorder(),
             ),
           ),
-          
+
           SizedBox(height: 16),
           Text('Relationship to Patient'),
           TextField(
@@ -499,7 +507,7 @@ class _SettingsPageState extends State<SettingsPage> {
               border: OutlineInputBorder(),
             ),
           ),
-          
+
           SizedBox(height: 16),
           Text('Illness Cause/Type'),
           TextField(
@@ -509,11 +517,12 @@ class _SettingsPageState extends State<SettingsPage> {
               border: OutlineInputBorder(),
             ),
           ),
-          
+
           SizedBox(height: 24),
-          Text('Chat Background', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text('Chat Background',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 16),
-          
+
           GestureDetector(
             onTap: _changeBackground,
             child: _backgroundUrl.isNotEmpty
@@ -521,16 +530,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
                       _backgroundUrl,
-                      width: double.infinity, 
-                      height: 200, 
+                      width: double.infinity,
+                      height: 200,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => 
-                        Container(
-                          width: double.infinity, 
-                          height: 200, 
-                          color: Colors.grey,
-                          child: Icon(Icons.error),
-                        ),
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: double.infinity,
+                        height: 200,
+                        color: Colors.grey,
+                        child: Icon(Icons.error),
+                      ),
                     ),
                   )
                 : Container(
@@ -538,12 +546,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    width: double.infinity, 
+                    width: double.infinity,
                     height: 200,
                     child: Icon(Icons.image, size: 50),
                   ),
           ),
-          
+
           SizedBox(height: 32),
           Center(
             child: ElevatedButton(
