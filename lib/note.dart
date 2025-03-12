@@ -303,9 +303,8 @@ class _NotePageState extends State<NotePage> {
       final response = await _httpClient.get(
         Uri.parse("$_baseUrl/notes"),
         headers: {
-          // 'X-User-ID': '1', // Replace with actual user authentication
           'Content-Type': 'application/json',
-		  'Authorization': 'Bearer ${token}',
+          'Authorization': 'Bearer $token',
         },
       );
 
@@ -363,12 +362,12 @@ class _NotePageState extends State<NotePage> {
       developer.log('Creating new note for date: $dateString',
           name: 'NotePage');
 
+      final token = await UserProfileService.getAuthToken();
       final response = await _httpClient.post(
         Uri.parse("$_baseUrl/notes"),
         headers: {
-          'X-User-ID': '1', // Replace with actual user authentication
           'Content-Type': 'application/json',
-		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
           'note_date': dateString,
@@ -419,11 +418,12 @@ class _NotePageState extends State<NotePage> {
     try {
       developer.log('Updating note with ID: $noteId', name: 'NotePage');
 
+      final token = await UserProfileService.getAuthToken();
       final response = await _httpClient.put(
         Uri.parse("$_baseUrl/notes/$noteId"),
         headers: {
-          'X-User-ID': '1', // Replace with actual user authentication
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
           'content': content,
@@ -434,6 +434,14 @@ class _NotePageState extends State<NotePage> {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
         if (responseData['success'] == true) {
+          // Update the note in the local list before fetching
+          final int noteIndex = _notes.indexWhere((note) => note['note_id'].toString() == noteId);
+          if (noteIndex != -1) {
+            setState(() {
+              _notes[noteIndex]['content'] = content;
+            });
+          }
+          
           // Refresh the notes list
           await _fetchNotes();
 
@@ -471,11 +479,12 @@ class _NotePageState extends State<NotePage> {
     try {
       developer.log('Deleting note with ID: $noteId', name: 'NotePage');
 
+      final token = await UserProfileService.getAuthToken();
       final response = await _httpClient.delete(
         Uri.parse("$_baseUrl/notes/$noteId"),
         headers: {
-          'X-User-ID': '1', // Replace with actual user authentication
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
       );
 
@@ -483,8 +492,11 @@ class _NotePageState extends State<NotePage> {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
         if (responseData['success'] == true) {
-          // Refresh notes to update the list
-          await _fetchNotes();
+          // Remove the note from the local list
+          setState(() {
+            _notes.removeWhere((note) => note['note_id'].toString() == noteId);
+            _isLoading = false;
+          });
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Note deleted successfully')),
@@ -564,16 +576,6 @@ class _NotePageState extends State<NotePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Notes'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _fetchNotes,
-            tooltip: 'Refresh Notes',
-          ),
-        ],
-      ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : Column(
@@ -630,6 +632,14 @@ class _NotePageState extends State<NotePage> {
                                             ),
                                           ),
                                           Spacer(),
+                                          IconButton(
+                                            icon: Icon(Icons.edit, 
+                                                color: Colors.blue),
+                                            onPressed: () {
+                                              _showNoteDialog(existingNote: note);
+                                            },
+                                            tooltip: 'Edit Note',
+                                          ),
                                           IconButton(
                                             icon: Icon(Icons.delete_outline,
                                                 color: Colors.red),

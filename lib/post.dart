@@ -207,13 +207,12 @@ class _PostSquarePageState extends State<PostSquarePage> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? '';
+      final token = await UserProfileService.getAuthToken();
 
       final response = await _httpClient.get(
         Uri.parse('$_baseUrl/posts?page=$_currentPage&size=$_pageSize'),
         headers: {
-		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
+		  'Authorization': 'Bearer ${token}',
           'Content-Type': 'application/json',
         },
       );
@@ -451,13 +450,11 @@ class _PostSquarePageState extends State<PostSquarePage> {
 
   Future<void> _deletePost(int postId, int index) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? '';
-
+      final token = await UserProfileService.getAuthToken();
       final response = await _httpClient.delete(
         Uri.parse('$_baseUrl/posts/$postId'),
         headers: {
-		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
+		  'Authorization': 'Bearer ${token}',
           'Content-Type': 'application/json',
         },
       );
