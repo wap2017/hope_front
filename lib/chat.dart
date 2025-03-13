@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
+import 'setting.dart';
 
 // 这个StatefulWidget好像看上去还挺常用的
 class ChatPage extends StatefulWidget {
@@ -59,14 +60,9 @@ class _ChatPageState extends State<ChatPage> {
           _backgroundUrl = profile.chatBackground;
         });
       } else {
-        // If not in local storage, fetch from API (assuming user ID 2)
-        // TODO 这里不能写死2哦, 这里其实要跳到登录页?
-        final fetchedProfile = await UserProfileService.fetchAndSaveProfile(2);
-        if (fetchedProfile != null) {
-          setState(() {
-            _backgroundUrl = fetchedProfile.chatBackground;
-          });
-        }
+        // 跳到登录页
+        Navigator.of(context)
+            .pushReplacement(MaterialPageRoute(builder: (_) => LoginPage()));
       }
     } catch (e) {
       print('Error loading user profile: $e');
@@ -79,10 +75,13 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _fetchMessages() async {
     final token = await UserProfileService.getAuthToken();
+    final profile = await UserProfileService.getProfile();
+    final userid = profile?.id;
+
     try {
       final response = await http.get(
         Uri.parse(
-            "http://hope.ioaths.com/hope/messages?chat_id=1:2&user_id=2&last_id=$_lastId"),
+            "http://hope.ioaths.com/hope/messages?chat_id=1:${userid}&user_id=${userid}&last_id=$_lastId"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${token}',
@@ -120,9 +119,11 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _sendMessage() async {
     if (_controller.text.isEmpty) return;
 
+    final profile = await UserProfileService.getProfile();
+    final userid = profile?.id;
     final message = {
-      "user_id": 2,
-      "chat_id": "1:2",
+      "user_id": userid,
+      "chat_id": "1:$userid",
       "content": _controller.text
     };
 

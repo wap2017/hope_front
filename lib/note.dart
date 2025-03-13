@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 
-
 // Custom HTTP client wrapper with logging
 class LoggingHttpClient {
   final http.Client _client = http.Client();
@@ -435,13 +434,14 @@ class _NotePageState extends State<NotePage> {
 
         if (responseData['success'] == true) {
           // Update the note in the local list before fetching
-          final int noteIndex = _notes.indexWhere((note) => note['note_id'].toString() == noteId);
+          final int noteIndex =
+              _notes.indexWhere((note) => note['note_id'].toString() == noteId);
           if (noteIndex != -1) {
             setState(() {
               _notes[noteIndex]['content'] = content;
             });
           }
-          
+
           // Refresh the notes list
           await _fetchNotes();
 
@@ -633,10 +633,11 @@ class _NotePageState extends State<NotePage> {
                                           ),
                                           Spacer(),
                                           IconButton(
-                                            icon: Icon(Icons.edit, 
+                                            icon: Icon(Icons.edit,
                                                 color: Colors.blue),
                                             onPressed: () {
-                                              _showNoteDialog(existingNote: note);
+                                              _showNoteDialog(
+                                                  existingNote: note);
                                             },
                                             tooltip: 'Edit Note',
                                           ),
