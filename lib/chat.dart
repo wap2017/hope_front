@@ -17,12 +17,36 @@ class _ChatPageState extends State<ChatPage> {
   int _lastId = 0;
   String _backgroundUrl = '';
   bool _isLoading = true;
+  // Add ScrollController for auto-scrolling
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
     _fetchMessages();
+  }
+
+  @override
+  void dispose() {
+    // Dispose the scroll controller when not needed
+    _scrollController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // Method to scroll to bottom of chat
+  void _scrollToBottom() {
+    // Add a small delay to ensure the list is updated before scrolling
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _loadUserProfile() async {
@@ -82,6 +106,11 @@ class _ChatPageState extends State<ChatPage> {
             _lastId = _messages.last["id"];
           }
         });
+
+        // Scroll to bottom after messages are loaded
+        if (!_isLoading) {
+          _scrollToBottom();
+        }
       }
     } catch (e) {
       print('Error fetching messages: $e');
@@ -113,6 +142,8 @@ class _ChatPageState extends State<ChatPage> {
         _controller.clear();
         // Fetch updated messages
         await _fetchMessages();
+        // Scroll to bottom after sending message
+        _scrollToBottom();
       } else {
         print('Failed to send message: ${response.statusCode}');
       }
@@ -141,6 +172,8 @@ class _ChatPageState extends State<ChatPage> {
               child: _isLoading
                   ? Center(child: CircularProgressIndicator())
                   : ListView.builder(
+                      controller:
+                          _scrollController, // Assign the ScrollController
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
                         final message = _messages[index];
