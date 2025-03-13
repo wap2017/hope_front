@@ -579,17 +579,17 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-class LoginPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Implement your login page here
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Login'),
-      ),
-      body: Center(
-        child: Text('Login Page'),
-      ),
-    );
-  }
-}
+// class LoginPage extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     // Implement your login page here
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: Text('Login'),
+//       ),
+//       body: Center(
+//         child: Text('Login Page'),
+//       ),
+//     );
+//   }
+// }

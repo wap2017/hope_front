@@ -10,10 +10,61 @@ import 'setting.dart';
 import 'post.dart';
 import 'user_profile_service.dart';
 import 'login.dart';
-import 'home.dart';
 
-void main() {
-  runApp(MyApp());
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      // title: 'Flutter App',
+      // home: MyHomePage(),
+      title: 'Hope App',
+      home: AuthWrapper(),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _pages = [
+    ChatPage(),
+    PostSquarePage(),
+    NotePage(),
+    SettingsPage()
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('抑郁伴侣')),
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: Colors.blue, // Set selected icon color
+        unselectedItemColor: Colors.grey, // Set unselected icon color
+        showUnselectedLabels: true, // Ensure unselected labels are visible
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+          BottomNavigationBarItem(icon: Icon(Icons.photo), label: 'Post'),
+          BottomNavigationBarItem(icon: Icon(Icons.note), label: 'Notes'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: 'Settings'),
+        ],
+      ),
+    );
+  }
 }
 
 class AuthWrapper extends StatefulWidget {

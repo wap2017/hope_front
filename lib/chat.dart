@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 import 'setting.dart';
+import 'login.dart';
 
 // 这个StatefulWidget好像看上去还挺常用的
 class ChatPage extends StatefulWidget {
@@ -178,7 +179,7 @@ class _ChatPageState extends State<ChatPage> {
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
                         final message = _messages[index];
-                        final bool isUserMessage = message["sender_id"] == 2;
+                        final bool isUserMessage = message["sender_id"] != 1;
 
                         return Align(
                           alignment: isUserMessage

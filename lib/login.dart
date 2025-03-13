@@ -4,48 +4,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'note.dart';
-import 'chat.dart';
-import 'setting.dart';
-import 'post.dart';
 import 'user_profile_service.dart';
-import 'login.dart';
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 import 'home.dart';
-
-void main() {
-  runApp(MyApp());
-}
-
-class AuthWrapper extends StatefulWidget {
-  @override
-  _AuthWrapperState createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  bool _isAuthenticated = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuthentication();
-  }
-
-  Future<void> _checkAuthentication() async {
-    final String? token = await UserProfileService.getAuthToken();
-    setState(() {
-      /* _isAuthenticated = profile != null; */
-      _isAuthenticated = token != null && token.isNotEmpty;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    print("hello");
-    print(_isAuthenticated);
-    print("hello2");
-    return _isAuthenticated ? MyHomePage() : LoginPage();
-  }
-}
 
 class LoginPage extends StatefulWidget {
   @override

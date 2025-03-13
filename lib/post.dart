@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 
-
 // Custom HTTP client wrapper with logging
 class LoggingHttpClient {
   final http.Client _client = http.Client();
@@ -114,35 +113,34 @@ class LoggingHttpClient {
   void close() {
     _client.close();
   }
-  
+
   // Extension for MultipartRequest with logging
   Future<http.Response> sendMultipartRequest(
-    http.MultipartRequest request
-  ) async {
+      http.MultipartRequest request) async {
     // Log as curl command with simplified body info
     StringBuffer curlCmd = StringBuffer('curl -X ${request.method}');
-    
+
     // Add headers
     request.headers.forEach((key, value) {
       curlCmd.write(" -H '$key: $value'");
     });
-    
+
     // Log fields
     request.fields.forEach((key, value) {
       curlCmd.write(" -F '$key=$value'");
     });
-    
+
     // Log files (simplified)
     for (var file in request.files) {
       curlCmd.write(" -F '${file.field}=@${file.filename}'");
     }
-    
+
     // Add URL
     curlCmd.write(" '${request.url}'");
-    
+
     // Log the cURL command
     print('NETWORK_DEBUG: ${curlCmd.toString()}');
-    
+
     try {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -165,13 +163,14 @@ class _PostSquarePageState extends State<PostSquarePage> {
   bool _isLoading = false;
   bool _hasMore = true;
   int _currentPage = 1;
+  String? _userAvatarUrl = "";
   final int _pageSize = 10;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _postController = TextEditingController();
   List<XFile> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
   final String _baseUrl = "http://hope.ioaths.com/hope";
-  
+
   // Create an instance of our logging HTTP client
   final LoggingHttpClient _httpClient = LoggingHttpClient();
 
@@ -192,7 +191,8 @@ class _PostSquarePageState extends State<PostSquarePage> {
   }
 
   void _scrollListener() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9 &&
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent * 0.9 &&
         !_isLoading &&
         _hasMore) {
       _loadMorePosts();
@@ -207,12 +207,15 @@ class _PostSquarePageState extends State<PostSquarePage> {
     });
 
     try {
+      final profile = await UserProfileService.getProfile();
+      print(profile);
+      _userAvatarUrl = profile?.userAvatar;
       final token = await UserProfileService.getAuthToken();
 
       final response = await _httpClient.get(
         Uri.parse('$_baseUrl/posts?page=$_currentPage&size=$_pageSize'),
         headers: {
-		  'Authorization': 'Bearer ${token}',
+          'Authorization': 'Bearer ${token}',
           'Content-Type': 'application/json',
         },
       );
@@ -270,13 +273,13 @@ class _PostSquarePageState extends State<PostSquarePage> {
   Future<void> _pickImages() async {
     try {
       final List<XFile> images = await _picker.pickMultiImage();
-      
+
       if (images.isNotEmpty) {
         // Limit to 9 images maximum
-        final newImages = images.length + _selectedImages.length > 9 
-            ? images.sublist(0, 9 - _selectedImages.length) 
+        final newImages = images.length + _selectedImages.length > 9
+            ? images.sublist(0, 9 - _selectedImages.length)
             : images;
-            
+
         setState(() {
           _selectedImages.addAll(newImages);
           if (_selectedImages.length > 9) {
@@ -317,7 +320,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
 
       // Add headers
       request.headers.addAll({
-		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
+        'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
       });
 
       // Add text fields
@@ -380,14 +383,14 @@ class _PostSquarePageState extends State<PostSquarePage> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
 
-      final url = _posts[index]['liked'] 
+      final url = _posts[index]['liked']
           ? '$_baseUrl/posts/$postId/unlike'
           : '$_baseUrl/posts/$postId/like';
 
       final response = await _httpClient.post(
         Uri.parse(url),
         headers: {
-		  'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
+          'Authorization': 'Bearer ${UserProfileService.getAuthToken()}',
           'Content-Type': 'application/json',
         },
       );
@@ -405,7 +408,8 @@ class _PostSquarePageState extends State<PostSquarePage> {
             }
           });
         } else {
-          _showErrorMessage(responseData['message'] ?? 'Failed to update like status');
+          _showErrorMessage(
+              responseData['message'] ?? 'Failed to update like status');
         }
       } else {
         _showErrorMessage('Server error: ${response.statusCode}');
@@ -454,7 +458,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
       final response = await _httpClient.delete(
         Uri.parse('$_baseUrl/posts/$postId'),
         headers: {
-		  'Authorization': 'Bearer ${token}',
+          'Authorization': 'Bearer ${token}',
           'Content-Type': 'application/json',
         },
       );
@@ -501,9 +505,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundImage: NetworkImage(
-                          'https://tse2-mm.cn.bing.net/th/id/OIP-C.QZIRZKUSWt1HBifjDRKGzAHaFj?rs=1&pid=ImgDetMain',
-                        ),
+                        backgroundImage: NetworkImage(_userAvatarUrl ?? ''),
                         radius: 20,
                       ),
                       SizedBox(width: 12),
@@ -520,7 +522,6 @@ class _PostSquarePageState extends State<PostSquarePage> {
                       ),
                     ],
                   ),
-                  
                   if (_selectedImages.isNotEmpty)
                     Container(
                       height: 100,
@@ -537,7 +538,8 @@ class _PostSquarePageState extends State<PostSquarePage> {
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
                                   image: DecorationImage(
-                                    image: FileImage(File(_selectedImages[index].path)),
+                                    image: FileImage(
+                                        File(_selectedImages[index].path)),
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -566,9 +568,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
                         },
                       ),
                     ),
-                  
                   SizedBox(height: 12),
-                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -596,7 +596,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
               ),
             ),
           ),
-          
+
           // Post list
           Expanded(
             child: RefreshIndicator(
@@ -617,14 +617,16 @@ class _PostSquarePageState extends State<PostSquarePage> {
                             ),
                           );
                         }
-                        
+
                         final post = _posts[index];
                         final postId = post['id'];
                         final userInfo = post['user_info'] ?? {};
-                        final images = List<Map<String, dynamic>>.from(post['images'] ?? []);
-                        
+                        final images = List<Map<String, dynamic>>.from(
+                            post['images'] ?? []);
+
                         return Card(
-                          margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                          margin: EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 8.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -632,30 +634,33 @@ class _PostSquarePageState extends State<PostSquarePage> {
                               ListTile(
                                 leading: CircleAvatar(
                                   backgroundImage: NetworkImage(
-                                    userInfo['user_avatar'] ?? 'https://via.placeholder.com/150',
+                                    userInfo['user_avatar'] ??
+                                        'https://via.placeholder.com/150',
                                   ),
                                 ),
-                                title: Text(userInfo['user_nickname'] ?? 'Anonymous'),
+                                title: Text(
+                                    userInfo['user_nickname'] ?? 'Anonymous'),
                                 subtitle: Text(
                                   _formatDate(post['created_at']),
                                   style: TextStyle(fontSize: 12),
                                 ),
                                 trailing: IconButton(
                                   icon: Icon(Icons.more_vert),
-                                  onPressed: () => _showPostOptions(postId, index),
+                                  onPressed: () =>
+                                      _showPostOptions(postId, index),
                                 ),
                               ),
-                              
+
                               // Post content
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 16.0, vertical: 8.0),
                                 child: Text(post['content'] ?? ''),
                               ),
-                              
+
                               // Post images
-                              if (images.isNotEmpty)
-                                _buildImageGallery(images),
-                              
+                              if (images.isNotEmpty) _buildImageGallery(images),
+
                               // Post stats
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -678,12 +683,13 @@ class _PostSquarePageState extends State<PostSquarePage> {
                                   ],
                                 ),
                               ),
-                              
+
                               Divider(),
-                              
+
                               // Post actions
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   TextButton.icon(
                                     onPressed: () => _likePost(postId, index),
@@ -779,11 +785,11 @@ class _PostSquarePageState extends State<PostSquarePage> {
 
   String _formatDate(int timestamp) {
     if (timestamp == null) return '';
-    
+
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 365) {
       return '${(difference.inDays / 365).floor()} years ago';
     } else if (difference.inDays > 30) {
