@@ -410,7 +410,7 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Profile Information',
+          Text('用户信息',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 16),
 
@@ -418,7 +418,7 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               Column(
                 children: [
-                  Text('Avatar'),
+                  Text('头像'),
                   SizedBox(height: 8),
                   GestureDetector(
                     onTap: _changeAvatar,
@@ -456,7 +456,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Nickname'),
+                    Text('昵称'),
                     TextField(
                       controller: _nicknameController,
                       decoration: InputDecoration(
@@ -467,7 +467,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     SizedBox(height: 12),
-                    Text('Mobile Number'),
+                    Text('联系方式'),
                     TextField(
                       controller: _mobileNumberController,
                       decoration: InputDecoration(
@@ -485,11 +485,11 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           SizedBox(height: 24),
-          Text('Patient Information',
+          Text('患者信息',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 16),
 
-          Text('Patient Name'),
+          Text('患者昵称'),
           TextField(
             controller: _patientNameController,
             decoration: InputDecoration(
@@ -499,7 +499,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           SizedBox(height: 16),
-          Text('Relationship to Patient'),
+          Text('与患者关系'),
           TextField(
             controller: _relationshipController,
             decoration: InputDecoration(
@@ -509,7 +509,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           SizedBox(height: 16),
-          Text('Illness Cause/Type'),
+          Text('患病主要诱因'),
           TextField(
             controller: _illnessCauseController,
             decoration: InputDecoration(
@@ -519,7 +519,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           SizedBox(height: 24),
-          Text('Chat Background',
+          Text('聊天背景图片',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 16),
 
@@ -559,7 +559,7 @@ class _SettingsPageState extends State<SettingsPage> {
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
-              child: Text('Save Settings'),
+              child: Text('保存设置'),
             ),
           ),
 
@@ -570,7 +570,7 @@ class _SettingsPageState extends State<SettingsPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red, // Optional: make it stand out
               ),
-              child: Text('Logout'),
+              child: Text('登出'),
             ),
           ),
         ],
