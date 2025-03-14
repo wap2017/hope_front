@@ -8,8 +8,8 @@ import 'note.dart';
 import 'chat.dart';
 import 'setting.dart';
 import 'post.dart';
+import 'register.dart';
 import 'user_profile_service.dart';
-import 'login.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -94,6 +94,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     print("hello");
     print(_isAuthenticated);
     print("hello2");
+    if (!_isAuthenticated) {}
     return _isAuthenticated ? MyHomePage() : LoginPage();
   }
 }
@@ -145,6 +146,15 @@ class _LoginPageState extends State<LoginPage> {
             ElevatedButton(
               onPressed: _login,
               child: Text('Login'),
+            ),
+            SizedBox(height: 16),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => RegisterPage()),
+                );
+              },
+              child: Text('New user? Register here'),
             ),
           ],
         ),

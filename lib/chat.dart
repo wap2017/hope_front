@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 import 'setting.dart';
-import 'login.dart';
+import 'home.dart';
 
 // 这个StatefulWidget好像看上去还挺常用的
 class ChatPage extends StatefulWidget {
@@ -78,6 +78,7 @@ class _ChatPageState extends State<ChatPage> {
     final token = await UserProfileService.getAuthToken();
     final profile = await UserProfileService.getProfile();
     final userid = profile?.id;
+    print("userid: ${userid}");
 
     try {
       final response = await http.get(

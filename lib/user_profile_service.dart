@@ -82,7 +82,6 @@ class UserProfileService {
         Uri.parse('$_apiBaseUrl/auth/register'),
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
         },
         body: jsonEncode({
           'mobile_number': mobileNumber,
@@ -211,6 +210,7 @@ class UserProfileService {
   // Save profile to local storage
   static Future<bool> _saveProfileLocally(UserProfile profile) async {
     print("_saveProfileLocally $profile");
+    print("_saveProfileLocally ${profile.id}");
     try {
       final prefs = await SharedPreferences.getInstance();
       final profileJson = jsonEncode(profile.toJson());

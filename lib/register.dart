@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'user_profile_service.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
+import 'home.dart';
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -87,6 +88,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _register() async {
     // Basic validation
+    print("-------");
+    print("do _register");
+    print("-------");
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
         _errorMessage = 'Passwords do not match';
@@ -126,6 +130,11 @@ class _RegisterPageState extends State<RegisterPage> {
         }),
       );
 
+      print("---response-----");
+      print("${response.statusCode}");
+      print("${response.body}");
+      print("---response-----");
+
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -143,6 +152,14 @@ class _RegisterPageState extends State<RegisterPage> {
           });
         }
       } else {
+        print("non 201");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${response.body}"),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
         setState(() {
           _errorMessage = 'Server error: ${response.statusCode}';
         });

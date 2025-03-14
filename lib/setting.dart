@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user_profile_service.dart';
-import 'main.dart';
+import 'home.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
 
@@ -23,7 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String _avatarUrl = '';
   String _backgroundUrl = '';
   bool _isLoading = true;
-  int _userId = 2; // Default user ID, consider making this dynamic
+  // int _userId = 2; // Default user ID, consider making this dynamic
 
   @override
   void initState() {
@@ -42,8 +42,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // If not available locally, fetch from API
       if (profile == null) {
-        profile = await UserProfileService.fetchAndSaveProfile(_userId);
-        // TODO 是否要跳到登录页
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => LoginPage()),
+        );
       }
 
       if (profile != null) {
@@ -73,9 +74,12 @@ class _SettingsPageState extends State<SettingsPage> {
       _isLoading = true;
     });
 
+    final profile = await UserProfileService.getProfile();
+    final userid = profile?.id ?? 0;
+
     try {
       final updatedProfile = UserProfile(
-        id: _userId,
+        id: userid,
         userNickname: _nicknameController.text,
         patientName: _patientNameController.text,
         relationshipToPatient: _relationshipController.text,
