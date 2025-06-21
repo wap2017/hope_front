@@ -318,6 +318,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
           setState(() {
             _postController.clear();
             _selectedImages = [];
+            _isLoading = false;
           });
 
           _refreshPosts();
