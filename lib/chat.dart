@@ -6,8 +6,8 @@ import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 import 'setting.dart';
 import 'home.dart';
+import 'main.dart';
 
-// 这个StatefulWidget好像看上去还挺常用的
 class ChatPage extends StatefulWidget {
   @override
   _ChatPageState createState() => _ChatPageState();
@@ -19,7 +19,6 @@ class _ChatPageState extends State<ChatPage> {
   int _lastId = 0;
   String _backgroundUrl = '';
   bool _isLoading = true;
-  // Add ScrollController for auto-scrolling
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -31,15 +30,12 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
-    // Dispose the scroll controller when not needed
     _scrollController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  // Method to scroll to bottom of chat
   void _scrollToBottom() {
-    // Add a small delay to ensure the list is updated before scrolling
     Future.delayed(Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -53,7 +49,6 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _loadUserProfile() async {
     try {
-      // First try to get from local storage
       final profile = await UserProfileService.getProfile();
 
       if (profile != null) {
@@ -61,7 +56,6 @@ class _ChatPageState extends State<ChatPage> {
           _backgroundUrl = profile.chatBackground;
         });
       } else {
-        // 跳到登录页
         Navigator.of(context)
             .pushReplacement(MaterialPageRoute(builder: (_) => LoginPage()));
       }
@@ -78,7 +72,6 @@ class _ChatPageState extends State<ChatPage> {
     final token = await UserProfileService.getAuthToken();
     final profile = await UserProfileService.getProfile();
     final userid = profile?.id;
-    print("userid: ${userid}");
 
     try {
       final response = await http.get(
@@ -108,7 +101,6 @@ class _ChatPageState extends State<ChatPage> {
           }
         });
 
-        // Scroll to bottom after messages are loaded
         if (!_isLoading) {
           _scrollToBottom();
         }
@@ -141,11 +133,8 @@ class _ChatPageState extends State<ChatPage> {
       );
 
       if (response.statusCode == 200) {
-        // Clear the input field
         _controller.clear();
-        // Fetch updated messages
         await _fetchMessages();
-        // Scroll to bottom after sending message
         _scrollToBottom();
         await Future.delayed(Duration(seconds: 3));
         await _fetchMessages();
@@ -159,120 +148,253 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      // Apply background from profile
-      decoration: BoxDecoration(
-        image: _backgroundUrl.isNotEmpty
-            ? DecorationImage(
-                image: NetworkImage(_backgroundUrl),
-                fit: BoxFit.cover,
-              )
-            : null,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          '心理咨询',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+            onPressed: () {},
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
+      body: Container(
+        decoration: _backgroundUrl.isNotEmpty
+            ? BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(_backgroundUrl),
+                  fit: BoxFit.cover,
+                ),
+              )
+            : BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.primaryLight.withOpacity(0.3),
+                    AppColors.background,
+                  ],
+                ),
+              ),
         child: Column(
           children: [
             Expanded(
               child: _isLoading
-                  ? Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.success),
+                      ),
+                    )
                   : ListView.builder(
-                      controller:
-                          _scrollController, // Assign the ScrollController
+                      controller: _scrollController,
+                      padding: EdgeInsets.all(AppDimens.paddingMedium),
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
                         final message = _messages[index];
                         final bool isUserMessage = message["sender_id"] != 1;
 
-                        return Align(
-                          alignment: isUserMessage
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Container(
-                            margin: EdgeInsets.symmetric(
-                              vertical: 4.0,
-                              horizontal: 8.0,
-                            ),
-                            padding: EdgeInsets.all(12.0),
-                            decoration: BoxDecoration(
-                              color: isUserMessage
-                                  ? Colors.blue[100]
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(12.0),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  offset: Offset(0, 1),
-                                  blurRadius: 3,
-                                ),
-                              ],
-                            ),
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.7,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  message["content"] ?? '',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.black87,
+                        return Padding(
+                          padding:
+                              EdgeInsets.only(bottom: AppDimens.paddingMedium),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: isUserMessage
+                                ? MainAxisAlignment.end
+                                : MainAxisAlignment.start,
+                            children: [
+                              if (!isUserMessage) ...[
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppColors.accent,
+                                        AppColors.success
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            AppColors.success.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.psychology,
+                                    color: Colors.white,
+                                    size: 20,
                                   ),
                                 ),
-                                SizedBox(height: 4),
-                                // Text(
-                                //   'ID: ${message["id"]}',
-                                //   style: TextStyle(
-                                //     fontSize: 12,
-                                //     color: Colors.black54,
-                                //   ),
-                                // ),
+                                SizedBox(width: 12),
                               ],
-                            ),
+                              Flexible(
+                                child: Container(
+                                  padding:
+                                      EdgeInsets.all(AppDimens.paddingMedium),
+                                  decoration: BoxDecoration(
+                                    color: isUserMessage
+                                        ? AppColors.primary
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(
+                                          AppDimens.radiusMedium),
+                                      topRight: Radius.circular(
+                                          AppDimens.radiusMedium),
+                                      bottomLeft: Radius.circular(
+                                        isUserMessage
+                                            ? AppDimens.radiusMedium
+                                            : 4,
+                                      ),
+                                      bottomRight: Radius.circular(
+                                        isUserMessage
+                                            ? 4
+                                            : AppDimens.radiusMedium,
+                                      ),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    message["content"] ?? '',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: AppColors.textPrimary,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (isUserMessage) ...[
+                                SizedBox(width: 12),
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            AppColors.primary.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.person,
+                                    color: AppColors.textSecondary,
+                                    size: 20,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         );
                       },
                     ),
             ),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              padding: EdgeInsets.all(AppDimens.paddingMedium),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24.0),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(AppDimens.radiusLarge),
+                  topRight: Radius.circular(AppDimens.radiusLarge),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black12,
-                    offset: Offset(0, -1),
-                    blurRadius: 3,
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 20,
+                    offset: Offset(0, -5),
                   ),
                 ],
               ),
-              margin: EdgeInsets.only(top: 8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      decoration: InputDecoration(
-                        hintText: 'Enter message',
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        border: InputBorder.none,
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusLarge),
+                          border: Border.all(
+                            color: AppColors.textLight.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: _controller,
+                          decoration: InputDecoration(
+                            hintText: '分享你的感受...',
+                            hintStyle: TextStyle(
+                              color: AppColors.textLight,
+                              fontSize: 16,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: AppDimens.paddingMedium,
+                              vertical: 12,
+                            ),
+                          ),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColors.textPrimary,
+                          ),
+                          maxLines: 3,
+                          minLines: 1,
+                        ),
                       ),
                     ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
+                    SizedBox(width: 12),
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.success, AppColors.accent],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.success.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.send, color: Colors.white, size: 20),
+                        onPressed: () {
+                          if (_controller.text.trim().isNotEmpty) {
+                            _sendMessage();
+                          }
+                        },
+                      ),
                     ),
-                    child: IconButton(
-                      icon: Icon(Icons.send, color: Colors.white),
-                      onPressed: _sendMessage,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

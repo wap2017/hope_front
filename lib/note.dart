@@ -4,51 +4,42 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
+import 'main.dart';
 
 // Custom HTTP client wrapper with logging
 class LoggingHttpClient {
   final http.Client _client = http.Client();
 
-  // Log request details as cURL command
   void _logRequestAsCurl(
       String method, Uri url, Map<String, String>? headers, dynamic body) {
     StringBuffer curlCmd = StringBuffer('curl -X $method');
 
-    // Add headers
     if (headers != null) {
       headers.forEach((key, value) {
         curlCmd.write(" -H '$key: $value'");
       });
     }
 
-    // Add body if present
     if (body != null) {
-      // Escape quotes in body
       String escapedBody = body.toString().replaceAll("'", "'\\''");
       curlCmd.write(" -d '$escapedBody'");
     }
 
-    // Add URL
     curlCmd.write(" '$url'");
-
-    // Log the cURL command
     print('NETWORK_DEBUG: ${curlCmd.toString()}');
   }
 
-  // Log response details
   void _logResponse(http.Response response) {
     developer.log(
         'HTTP Response: Status=${response.statusCode}, Body=${response.body.substring(0, response.body.length > 1000 ? 1000 : response.body.length)}${response.body.length > 1000 ? "..." : ""}',
         name: 'NetworkDebug');
   }
 
-  // Log error details
   void _logError(String method, Uri url, dynamic error) {
     developer.log('HTTP Error for $method $url: $error',
         name: 'NetworkDebug', error: error);
   }
 
-  // GET request with logging
   Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
     _logRequestAsCurl('GET', url, headers, null);
 
@@ -62,7 +53,6 @@ class LoggingHttpClient {
     }
   }
 
-  // POST request with logging
   Future<http.Response> post(Uri url,
       {Map<String, String>? headers, dynamic body}) async {
     _logRequestAsCurl('POST', url, headers, body);
@@ -77,7 +67,6 @@ class LoggingHttpClient {
     }
   }
 
-  // PUT request with logging
   Future<http.Response> put(Uri url,
       {Map<String, String>? headers, dynamic body}) async {
     _logRequestAsCurl('PUT', url, headers, body);
@@ -92,7 +81,6 @@ class LoggingHttpClient {
     }
   }
 
-  // DELETE request with logging
   Future<http.Response> delete(Uri url, {Map<String, String>? headers}) async {
     _logRequestAsCurl('DELETE', url, headers, null);
 
@@ -106,7 +94,6 @@ class LoggingHttpClient {
     }
   }
 
-  // Close the client
   void close() {
     _client.close();
   }
@@ -145,7 +132,6 @@ class _NoteDialogContentState extends State<NoteDialogContent> {
     super.initState();
     contentController = TextEditingController();
 
-    // Initialize with existing note data if available
     if (widget.existingNote != null) {
       contentController.text = widget.existingNote!['content'] ?? '';
       selectedDate = widget.parseDateFromApi(widget.existingNote!['note_date']);
@@ -156,91 +142,251 @@ class _NoteDialogContentState extends State<NoteDialogContent> {
 
   @override
   void dispose() {
-    // Properly dispose controller when the widget is disposed
     contentController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.existingNote == null ? 'Add New Note' : 'Edit Note'),
-      content: SingleChildScrollView(
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimens.radiusMedium),
+      ),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date picker section
-            if (widget.existingNote ==
-                null) // Only show date picker for new notes
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Header
+            Container(
+              padding: EdgeInsets.all(AppDimens.paddingMedium),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primaryLight, AppColors.accent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(AppDimens.radiusMedium),
+                  topRight: Radius.circular(AppDimens.radiusMedium),
+                ),
+              ),
+              child: Row(
                 children: [
-                  Text('Date:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(widget.displayDateFormat.format(selectedDate)),
-                      Spacer(),
-                      TextButton.icon(
-                        icon: Icon(Icons.calendar_today),
-                        label: Text('Select'),
-                        onPressed: () async {
-                          final DateTime? pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: selectedDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
-                          );
-                          if (pickedDate != null && mounted) {
-                            setState(() {
-                              selectedDate = pickedDate;
-                            });
-                          }
-                        },
-                      ),
-                    ],
+                  Icon(
+                    Icons.book,
+                    color: AppColors.success,
+                    size: 24,
                   ),
-                  Divider(),
+                  SizedBox(width: 12),
+                  Text(
+                    widget.existingNote == null ? '记录心情' : '编辑心情',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ],
               ),
+            ),
 
-            // Note content section
-            Text('Note:', style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.4,
-              ),
-              child: TextField(
-                controller: contentController,
-                decoration: InputDecoration(
-                  hintText: 'Write your note here...',
-                  border: OutlineInputBorder(),
+            // Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(AppDimens.paddingMedium),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Date picker section
+                    if (widget.existingNote == null)
+                      Container(
+                        padding: EdgeInsets.all(AppDimens.paddingMedium),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.3),
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusSmall),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '日期',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    widget.displayDateFormat
+                                        .format(selectedDate),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  icon: Icon(
+                                    Icons.calendar_today,
+                                    color: AppColors.success,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    '选择',
+                                    style: TextStyle(
+                                      color: AppColors.success,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    final DateTime? pickedDate =
+                                        await showDatePicker(
+                                      context: context,
+                                      initialDate: selectedDate,
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2030),
+                                      builder: (context, child) {
+                                        return Theme(
+                                          data: Theme.of(context).copyWith(
+                                            colorScheme: ColorScheme.light(
+                                              primary: AppColors.success,
+                                              onPrimary: Colors.white,
+                                              surface: Colors.white,
+                                              onSurface: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                          child: child!,
+                                        );
+                                      },
+                                    );
+                                    if (pickedDate != null && mounted) {
+                                      setState(() {
+                                        selectedDate = pickedDate;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    if (widget.existingNote == null)
+                      SizedBox(height: AppDimens.paddingMedium),
+
+                    // Note content section
+                    Text(
+                      '心情记录',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius:
+                            BorderRadius.circular(AppDimens.radiusSmall),
+                        border: Border.all(
+                          color: AppColors.textLight.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: contentController,
+                        decoration: InputDecoration(
+                          hintText: '记录今天的感受和想法...',
+                          hintStyle: TextStyle(color: AppColors.textLight),
+                          border: InputBorder.none,
+                          contentPadding:
+                              EdgeInsets.all(AppDimens.paddingMedium),
+                        ),
+                        maxLines: null,
+                        minLines: 6,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColors.textPrimary,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                maxLines: null,
-                minLines: 5,
+              ),
+            ),
+
+            // Actions
+            Container(
+              padding: EdgeInsets.all(AppDimens.paddingMedium),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusSmall),
+                        ),
+                      ),
+                      child: Text(
+                        '取消',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final String noteContent =
+                            contentController.text.trim();
+                        if (noteContent.isNotEmpty) {
+                          widget.onSave(noteContent, selectedDate);
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusSmall),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        '保存',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
-      actions: <Widget>[
-        TextButton(
-          child: Text('Cancel'),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        ElevatedButton(
-          child: Text('Save'),
-          onPressed: () {
-            final String noteContent = contentController.text;
-            widget.onSave(noteContent, selectedDate);
-            Navigator.of(context).pop();
-          },
-        ),
-      ],
     );
   }
 }
@@ -250,21 +396,14 @@ class _NotePageState extends State<NotePage> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Create an instance of our logging HTTP client
   final LoggingHttpClient _httpClient = LoggingHttpClient();
-
-  // Base URL for API calls
   final String _baseUrl = "https://hope.layu.cc/hope";
-
-  // Format for displaying dates in the UI
   final DateFormat _displayDateFormat = DateFormat('yyyy.MM.dd');
 
-  // Format for API date strings (matching your backend format)
   String _formatDateForApi(DateTime date) {
     return "${date.year}.${date.month}.${date.day}";
   }
 
-  // Parse API date string to DateTime
   DateTime _parseDateFromApi(String dateStr) {
     final parts = dateStr.split('.');
     if (parts.length == 3) {
@@ -283,12 +422,10 @@ class _NotePageState extends State<NotePage> {
 
   @override
   void dispose() {
-    // Clean up resources
     _httpClient.close();
     super.dispose();
   }
 
-  // Fetch all notes
   Future<void> _fetchNotes() async {
     setState(() {
       _isLoading = true;
@@ -314,11 +451,10 @@ class _NotePageState extends State<NotePage> {
           final notesList =
               List<Map<String, dynamic>>.from(responseData['data']);
 
-          // Sort notes by date (newest first)
           notesList.sort((a, b) {
             final dateA = _parseDateFromApi(a['note_date']);
             final dateB = _parseDateFromApi(b['note_date']);
-            return dateB.compareTo(dateA); // Newest first
+            return dateB.compareTo(dateA);
           });
 
           setState(() {
@@ -346,7 +482,6 @@ class _NotePageState extends State<NotePage> {
     }
   }
 
-  // Save a new note
   Future<void> _saveNote(String content, DateTime date) async {
     if (content.isEmpty) return;
 
@@ -378,11 +513,13 @@ class _NotePageState extends State<NotePage> {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
         if (responseData['success'] == true) {
-          // Refresh the notes list
           await _fetchNotes();
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Note saved successfully')),
+            SnackBar(
+              content: Text('心情记录保存成功'),
+              backgroundColor: AppColors.success,
+            ),
           );
         } else {
           setState(() {
@@ -405,7 +542,6 @@ class _NotePageState extends State<NotePage> {
     }
   }
 
-  // Update an existing note
   Future<void> _updateNote(String noteId, String content) async {
     if (content.isEmpty) return;
 
@@ -433,7 +569,6 @@ class _NotePageState extends State<NotePage> {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
         if (responseData['success'] == true) {
-          // Update the note in the local list before fetching
           final int noteIndex =
               _notes.indexWhere((note) => note['note_id'].toString() == noteId);
           if (noteIndex != -1) {
@@ -442,11 +577,13 @@ class _NotePageState extends State<NotePage> {
             });
           }
 
-          // Refresh the notes list
           await _fetchNotes();
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Note updated successfully')),
+            SnackBar(
+              content: Text('心情记录更新成功'),
+              backgroundColor: AppColors.success,
+            ),
           );
         } else {
           setState(() {
@@ -469,7 +606,6 @@ class _NotePageState extends State<NotePage> {
     }
   }
 
-  // Delete a note
   Future<void> _deleteNote(String noteId) async {
     setState(() {
       _isLoading = true;
@@ -492,14 +628,16 @@ class _NotePageState extends State<NotePage> {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
         if (responseData['success'] == true) {
-          // Remove the note from the local list
           setState(() {
             _notes.removeWhere((note) => note['note_id'].toString() == noteId);
             _isLoading = false;
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Note deleted successfully')),
+            SnackBar(
+              content: Text('心情记录删除成功'),
+              backgroundColor: AppColors.success,
+            ),
           );
         } else {
           setState(() {
@@ -522,7 +660,6 @@ class _NotePageState extends State<NotePage> {
     }
   }
 
-  // Updated _showNoteDialog method for your _NotePageState class
   Future<void> _showNoteDialog({Map<String, dynamic>? existingNote}) async {
     return showDialog<void>(
       context: context,
@@ -534,10 +671,8 @@ class _NotePageState extends State<NotePage> {
           parseDateFromApi: _parseDateFromApi,
           onSave: (String content, DateTime date) {
             if (existingNote == null) {
-              // Create new note
               _saveNote(content, date);
             } else {
-              // Update existing note
               _updateNote(
                 existingNote['note_id'].toString(),
                 content,
@@ -549,121 +684,365 @@ class _NotePageState extends State<NotePage> {
     );
   }
 
-  // Shows a confirmation dialog before deleting a note
   Future<bool> _confirmDelete() async {
     return await showDialog<bool>(
           context: context,
           builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Delete Note'),
-              content: Text('Are you sure you want to delete this note?'),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('Cancel'),
-                  onPressed: () => Navigator.of(context).pop(false),
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimens.radiusMedium),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(AppDimens.paddingMedium),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      size: 48,
+                      color: AppColors.error,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '删除心情记录',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '确定要删除这条心情记录吗？删除后将无法恢复。',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: Text(
+                              '取消',
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.error,
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppDimens.radiusSmall),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              '删除',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                TextButton(
-                  child: Text('Delete', style: TextStyle(color: Colors.red)),
-                  onPressed: () => Navigator.of(context).pop(true),
-                ),
-              ],
+              ),
             );
           },
         ) ??
         false;
   }
 
+  IconData _getMoodIcon(DateTime date) {
+    // Simple mood icon based on day of week for demo
+    final dayOfWeek = date.weekday;
+    switch (dayOfWeek) {
+      case 1:
+        return Icons.sentiment_very_satisfied;
+      case 2:
+        return Icons.sentiment_satisfied;
+      case 3:
+        return Icons.sentiment_neutral;
+      case 4:
+        return Icons.sentiment_dissatisfied;
+      case 5:
+        return Icons.sentiment_very_dissatisfied;
+      case 6:
+        return Icons.sentiment_satisfied_alt;
+      case 7:
+        return Icons.sentiment_very_satisfied;
+      default:
+        return Icons.sentiment_neutral;
+    }
+  }
+
+  Color _getMoodColor(DateTime date) {
+    final dayOfWeek = date.weekday;
+    switch (dayOfWeek) {
+      case 1:
+        return AppColors.success;
+      case 2:
+        return AppColors.success;
+      case 3:
+        return AppColors.warning;
+      case 4:
+        return AppColors.error;
+      case 5:
+        return AppColors.error;
+      case 6:
+        return AppColors.success;
+      case 7:
+        return AppColors.success;
+      default:
+        return AppColors.warning;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          '心情日记',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+              ),
+            )
           : Column(
               children: [
-                // Error message
                 if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(color: Colors.red),
+                  Container(
+                    margin: EdgeInsets.all(AppDimens.paddingMedium),
+                    padding: EdgeInsets.all(AppDimens.paddingMedium),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusSmall),
+                      border:
+                          Border.all(color: AppColors.error.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: AppColors.error),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(color: AppColors.error),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
-                // Notes list
                 Expanded(
                   child: _notes.isEmpty
                       ? Center(
-                          child: Text(
-                            'No notes yet. Click the + button to add one!',
-                            style: TextStyle(fontSize: 16),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.book_outlined,
+                                size: 64,
+                                color: AppColors.textLight,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                '还没有心情记录\n开始记录你的第一篇日记吧',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.textLight,
+                                ),
+                              ),
+                            ],
                           ),
                         )
                       : ListView.builder(
+                          padding: EdgeInsets.all(AppDimens.paddingMedium),
                           itemCount: _notes.length,
                           itemBuilder: (context, index) {
                             final note = _notes[index];
                             final date = _parseDateFromApi(note['note_date']);
 
-                            return Card(
-                              margin: EdgeInsets.symmetric(
-                                vertical: 6,
-                                horizontal: 10,
+                            return Container(
+                              margin: EdgeInsets.only(
+                                  bottom: AppDimens.paddingMedium),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(
+                                    AppDimens.radiusMedium),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 12,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                              elevation: 2,
-                              child: InkWell(
-                                onTap: () =>
-                                    _showNoteDialog(existingNote: note),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Icon(Icons.calendar_today, size: 16),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            _displayDateFormat.format(date),
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
+                              child: Column(
+                                children: [
+                                  // Header with gradient background
+                                  Container(
+                                    width: double.infinity,
+                                    padding:
+                                        EdgeInsets.all(AppDimens.paddingMedium),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          AppColors.primaryLight,
+                                          AppColors.accent
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(
+                                            AppDimens.radiusMedium),
+                                        topRight: Radius.circular(
+                                            AppDimens.radiusMedium),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.white.withOpacity(0.8),
+                                            borderRadius: BorderRadius.circular(
+                                                AppDimens.radiusSmall),
                                           ),
-                                          Spacer(),
-                                          IconButton(
-                                            icon: Icon(Icons.edit,
-                                                color: Colors.blue),
-                                            onPressed: () {
+                                          child: Icon(
+                                            _getMoodIcon(date),
+                                            color: _getMoodColor(date),
+                                            size: 24,
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                _displayDateFormat.format(date),
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textPrimary,
+                                                ),
+                                              ),
+                                              Text(
+                                                _getRelativeDate(date),
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuButton<String>(
+                                          icon: Icon(
+                                            Icons.more_vert,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                                AppDimens.radiusSmall),
+                                          ),
+                                          onSelected: (value) async {
+                                            if (value == 'edit') {
                                               _showNoteDialog(
                                                   existingNote: note);
-                                            },
-                                            tooltip: 'Edit Note',
-                                          ),
-                                          IconButton(
-                                            icon: Icon(Icons.delete_outline,
-                                                color: Colors.red),
-                                            onPressed: () async {
+                                            } else if (value == 'delete') {
                                               if (await _confirmDelete()) {
                                                 _deleteNote(
                                                     note['note_id'].toString());
                                               }
-                                            },
-                                            tooltip: 'Delete Note',
-                                          ),
-                                        ],
-                                      ),
-                                      Divider(),
-                                      Text(
-                                        note['content'] ?? '',
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 15),
-                                      ),
-                                    ],
+                                            }
+                                          },
+                                          itemBuilder: (BuildContext context) =>
+                                              [
+                                            PopupMenuItem<String>(
+                                              value: 'edit',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.edit,
+                                                      color: AppColors.success,
+                                                      size: 20),
+                                                  SizedBox(width: 12),
+                                                  Text('编辑'),
+                                                ],
+                                              ),
+                                            ),
+                                            PopupMenuItem<String>(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.delete,
+                                                      color: AppColors.error,
+                                                      size: 20),
+                                                  SizedBox(width: 12),
+                                                  Text('删除'),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+
+                                  // Content
+                                  InkWell(
+                                    onTap: () =>
+                                        _showNoteDialog(existingNote: note),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: EdgeInsets.all(
+                                          AppDimens.paddingMedium),
+                                      child: Text(
+                                        note['content'] ?? '',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          height: 1.6,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -671,11 +1050,55 @@ class _NotePageState extends State<NotePage> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showNoteDialog(),
-        child: Icon(Icons.add),
-        tooltip: 'Add New Note',
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.success, AppColors.accent],
+          ),
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.success.withOpacity(0.3),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () => _showNoteDialog(),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
       ),
     );
+  }
+
+  String _getRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(Duration(days: 1));
+    final noteDate = DateTime(date.year, date.month, date.day);
+
+    if (noteDate == today) {
+      return '今天';
+    } else if (noteDate == yesterday) {
+      return '昨天';
+    } else {
+      final difference = today.difference(noteDate).inDays;
+      if (difference < 7) {
+        return '$difference 天前';
+      } else if (difference < 30) {
+        return '${(difference / 7).floor()} 周前';
+      } else if (difference < 365) {
+        return '${(difference / 30).floor()} 个月前';
+      } else {
+        return '${(difference / 365).floor()} 年前';
+      }
+    }
   }
 }

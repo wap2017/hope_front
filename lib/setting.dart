@@ -8,6 +8,7 @@ import 'user_profile_service.dart';
 import 'home.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
+import 'main.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -23,7 +24,6 @@ class _SettingsPageState extends State<SettingsPage> {
   String _avatarUrl = '';
   String _backgroundUrl = '';
   bool _isLoading = true;
-  // int _userId = 2; // Default user ID, consider making this dynamic
 
   @override
   void initState() {
@@ -37,14 +37,13 @@ class _SettingsPageState extends State<SettingsPage> {
     });
 
     try {
-      // First try to get from local storage
       UserProfile? profile = await UserProfileService.getProfile();
 
-      // If not available locally, fetch from API
       if (profile == null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => LoginPage()),
         );
+        return;
       }
 
       if (profile != null) {
@@ -93,7 +92,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Settings updated successfully')),
+          SnackBar(
+            content: Text('设置保存成功'),
+            backgroundColor: AppColors.success,
+          ),
         );
       } else {
         _showErrorMessage('Failed to update settings');
@@ -109,39 +111,81 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showErrorMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: AppColors.error),
     );
     print(message);
   }
 
-  // Method to handle avatar image selection and upload
   Future<void> _changeAvatar() async {
-    final ImagePicker picker = ImagePicker();
-
-    // Display option dialog for camera or gallery
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text('Change Avatar'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                GestureDetector(
-                  child: Text('Take a picture'),
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppDimens.radiusMedium),
+              topRight: Radius.circular(AppDimens.radiusMedium),
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.textLight,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(AppDimens.paddingMedium),
+                  child: Text(
+                    '更换头像',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.5),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusSmall),
+                    ),
+                    child: Icon(Icons.camera_alt, color: AppColors.success),
+                  ),
+                  title: Text('拍照'),
                   onTap: () {
-                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).pop();
                     _getAvatarImage(ImageSource.camera);
                   },
                 ),
-                Padding(padding: EdgeInsets.all(8.0)),
-                GestureDetector(
-                  child: Text('Select from gallery'),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.5),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusSmall),
+                    ),
+                    child: Icon(Icons.photo_library, color: AppColors.success),
+                  ),
+                  title: Text('从相册选择'),
                   onTap: () {
-                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).pop();
                     _getAvatarImage(ImageSource.gallery);
                   },
                 ),
+                SizedBox(height: 20),
               ],
             ),
           ),
@@ -150,7 +194,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // Method to pick and upload avatar image
   Future<void> _getAvatarImage(ImageSource source) async {
     setState(() {
       _isLoading = true;
@@ -166,7 +209,6 @@ class _SettingsPageState extends State<SettingsPage> {
       );
 
       if (pickedFile != null) {
-        // Upload the image to server
         final String? newAvatarUrl =
             await _uploadFile(File(pickedFile.path), 'avatar');
 
@@ -175,7 +217,6 @@ class _SettingsPageState extends State<SettingsPage> {
             _avatarUrl = newAvatarUrl;
           });
 
-          // Save the updated avatar URL through UserProfileService
           final profile = await UserProfileService.getProfile();
           if (profile != null) {
             final updatedProfile = UserProfile(
@@ -191,23 +232,22 @@ class _SettingsPageState extends State<SettingsPage> {
 
             await UserProfileService.updateProfile(updatedProfile);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Avatar updated successfully')),
+              SnackBar(
+                content: Text('头像更新成功'),
+                backgroundColor: AppColors.success,
+              ),
             );
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Failed to upload avatar image'),
-                backgroundColor: Colors.red),
+            SnackBar(content: Text('头像上传失败'), backgroundColor: AppColors.error),
           );
         }
       }
     } catch (e) {
       print('Error picking image: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Error selecting image: $e'),
-            backgroundColor: Colors.red),
+        SnackBar(content: Text('选择图片出错: $e'), backgroundColor: AppColors.error),
       );
     } finally {
       setState(() {
@@ -216,34 +256,76 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  // Method to handle background image selection and upload
   Future<void> _changeBackground() async {
-    final ImagePicker picker = ImagePicker();
-
-    // Display option dialog for camera or gallery
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text('Change Background'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                GestureDetector(
-                  child: Text('Take a picture'),
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppDimens.radiusMedium),
+              topRight: Radius.circular(AppDimens.radiusMedium),
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.textLight,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(AppDimens.paddingMedium),
+                  child: Text(
+                    '更换聊天背景',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.5),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusSmall),
+                    ),
+                    child: Icon(Icons.camera_alt, color: AppColors.success),
+                  ),
+                  title: Text('拍照'),
                   onTap: () {
-                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).pop();
                     _getBackgroundImage(ImageSource.camera);
                   },
                 ),
-                Padding(padding: EdgeInsets.all(8.0)),
-                GestureDetector(
-                  child: Text('Select from gallery'),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.5),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusSmall),
+                    ),
+                    child: Icon(Icons.photo_library, color: AppColors.success),
+                  ),
+                  title: Text('从相册选择'),
                   onTap: () {
-                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).pop();
                     _getBackgroundImage(ImageSource.gallery);
                   },
                 ),
+                SizedBox(height: 20),
               ],
             ),
           ),
@@ -252,7 +334,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // Method to pick and upload background image
   Future<void> _getBackgroundImage(ImageSource source) async {
     setState(() {
       _isLoading = true;
@@ -268,7 +349,6 @@ class _SettingsPageState extends State<SettingsPage> {
       );
 
       if (pickedFile != null) {
-        // Upload the image to server
         final String? newBackgroundUrl =
             await _uploadFile(File(pickedFile.path), 'background');
 
@@ -277,7 +357,6 @@ class _SettingsPageState extends State<SettingsPage> {
             _backgroundUrl = newBackgroundUrl;
           });
 
-          // Save the updated background URL through UserProfileService
           final profile = await UserProfileService.getProfile();
           if (profile != null) {
             final updatedProfile = UserProfile(
@@ -293,23 +372,23 @@ class _SettingsPageState extends State<SettingsPage> {
 
             await UserProfileService.updateProfile(updatedProfile);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Background updated successfully')),
+              SnackBar(
+                content: Text('聊天背景更新成功'),
+                backgroundColor: AppColors.success,
+              ),
             );
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text('Failed to upload background image'),
-                backgroundColor: Colors.red),
+                content: Text('背景图片上传失败'), backgroundColor: AppColors.error),
           );
         }
       }
     } catch (e) {
       print('Error picking image: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Error selecting image: $e'),
-            backgroundColor: Colors.red),
+        SnackBar(content: Text('选择图片出错: $e'), backgroundColor: AppColors.error),
       );
     } finally {
       setState(() {
@@ -318,46 +397,33 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  // Method to upload a file to the server
   Future<String?> _uploadFile(File file, String type) async {
     try {
-      // Get the token for authorization
       final prefs = await SharedPreferences.getInstance();
       final token = await UserProfileService.getAuthToken();
-      print("----");
-      print(token);
-      print(type);
-      print("----");
 
-      // Create multipart request
-      final url =
-          Uri.parse('https://hope.layu.cc/hope/user/upload?type=$type');
+      final url = Uri.parse('https://hope.layu.cc/hope/user/upload?type=$type');
       var request = http.MultipartRequest('POST', url);
 
-      // Add authorization header
       request.headers.addAll({
         'Authorization': 'Bearer $token',
       });
 
-      // Get file extension
       final fileExtension = path.extension(file.path).replaceAll('.', '');
 
-      // Add file to request
       final multipartFile = await http.MultipartFile.fromPath(
-        'file', // field name that the server expects
+        'file',
         file.path,
         contentType: MediaType('image', fileExtension),
       );
       request.files.add(multipartFile);
 
-      // Send request
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         if (responseData['success'] == true && responseData['data'] != null) {
-          // Return the URL of the uploaded file
           return responseData['data']['file_url'];
         }
       }
@@ -371,229 +437,509 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _login() async {
-    // Implement login dialog or screen
-    final mobileNumber = _mobileNumberController.text;
-    final password = ''; // You'll want a password field
-
-    final profile = await UserProfileService.login(mobileNumber, password);
-
-    if (profile != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login successful')),
-      );
-      _fetchUserSettings();
-      //TODO 这里是不是要存到shared_preferences
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // Inside the _SettingsPageState class
   Future<void> _logout() async {
-    // Clear the stored profile and token
-    UserProfileService.clearCache();
-    // Navigate to the login page and remove all previous routes
-    Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => LoginPage()), (route) => false);
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimens.radiusMedium),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(AppDimens.paddingMedium),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.logout,
+                  size: 48,
+                  color: AppColors.warning,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  '退出登录',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '确定要退出登录吗？',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(
+                          '取消',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          UserProfileService.clearCache();
+                          Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (_) => LoginPage()),
+                              (route) => false);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.warning,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppDimens.radiusSmall),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          '退出',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+          ),
+        ),
+      );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('用户信息',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 16),
-
-          Row(
-            children: [
-              Column(
-                children: [
-                  Text('头像'),
-                  SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: _changeAvatar,
-                    child: _avatarUrl.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(50),
-                            child: Image.network(
-                              _avatarUrl,
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                width: 100,
-                                height: 100,
-                                color: Colors.grey,
-                                child: Icon(Icons.error),
-                              ),
-                            ),
-                          )
-                        : Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            width: 100,
-                            height: 100,
-                            child: Icon(Icons.person, size: 50),
-                          ),
-                  ),
-                ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          '设置',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(AppDimens.paddingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProfileSection(),
+            SizedBox(height: AppDimens.paddingLarge),
+            _buildSettingsSection('个人信息', [
+              _buildEditableSettingItem(
+                Icons.person_outline,
+                '用户昵称',
+                _nicknameController,
+                '请输入昵称',
               ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('昵称'),
-                    TextField(
-                      controller: _nicknameController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter nickname',
-                        border: OutlineInputBorder(),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Text('联系方式'),
-                    TextField(
-                      controller: _mobileNumberController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter mobile number',
-                        border: OutlineInputBorder(),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                  ],
+              _buildEditableSettingItem(
+                Icons.phone_outlined,
+                '手机号码',
+                _mobileNumberController,
+                '请输入手机号码',
+                keyboardType: TextInputType.phone,
+              ),
+            ]),
+            SizedBox(height: AppDimens.paddingMedium),
+            _buildSettingsSection('患者信息', [
+              _buildEditableSettingItem(
+                Icons.people_outline,
+                '患者姓名',
+                _patientNameController,
+                '请输入患者姓名',
+              ),
+              _buildEditableSettingItem(
+                Icons.favorite_outline,
+                '与患者关系',
+                _relationshipController,
+                '如：家属、朋友等',
+              ),
+              _buildEditableSettingItem(
+                Icons.medical_information_outlined,
+                '患病主要诱因',
+                _illnessCauseController,
+                '可选填写',
+                maxLines: 3,
+              ),
+            ]),
+            SizedBox(height: AppDimens.paddingMedium),
+            _buildSettingsSection('聊天设置', [
+              _buildActionSettingItem(
+                Icons.wallpaper_outlined,
+                '聊天背景',
+                '点击更换背景图片',
+                _changeBackground,
+              ),
+            ]),
+            SizedBox(height: AppDimens.paddingLarge),
+            Container(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _updateUserSettings,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  '保存设置',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ],
-          ),
-
-          SizedBox(height: 24),
-          Text('患者信息',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 16),
-
-          Text('患者昵称'),
-          TextField(
-            controller: _patientNameController,
-            decoration: InputDecoration(
-              hintText: 'Enter patient name',
-              border: OutlineInputBorder(),
             ),
-          ),
-
-          SizedBox(height: 16),
-          Text('与患者关系'),
-          TextField(
-            controller: _relationshipController,
-            decoration: InputDecoration(
-              hintText: 'Enter relationship',
-              border: OutlineInputBorder(),
-            ),
-          ),
-
-          SizedBox(height: 16),
-          Text('患病主要诱因'),
-          TextField(
-            controller: _illnessCauseController,
-            decoration: InputDecoration(
-              hintText: 'Enter illness information',
-              border: OutlineInputBorder(),
-            ),
-          ),
-
-          SizedBox(height: 24),
-          Text('聊天背景图片',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          SizedBox(height: 16),
-
-          GestureDetector(
-            onTap: _changeBackground,
-            child: _backgroundUrl.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      _backgroundUrl,
-                      width: double.infinity,
-                      height: 200,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        width: double.infinity,
-                        height: 200,
-                        color: Colors.grey,
-                        child: Icon(Icons.error),
-                      ),
-                    ),
-                  )
-                : Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    width: double.infinity,
-                    height: 200,
-                    child: Icon(Icons.image, size: 50),
+            SizedBox(height: AppDimens.paddingMedium),
+            Container(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: _logout,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
                   ),
-          ),
-
-          SizedBox(height: 32),
-          Center(
-            child: ElevatedButton(
-              onPressed: _updateUserSettings,
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                ),
+                child: Text(
+                  '退出登录',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-              child: Text('保存设置'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileSection() {
+    return Container(
+      padding: EdgeInsets.all(AppDimens.paddingLarge),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primaryLight, AppColors.accent],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppDimens.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: _changeAvatar,
+            child: Stack(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(40),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: _avatarUrl.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(40),
+                          child: Image.network(
+                            _avatarUrl,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(40),
+                              ),
+                              child: Icon(
+                                Icons.person,
+                                size: 40,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            size: 40,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-
-          // In the build method, add this near the bottom of the Column children
-          Center(
-            child: ElevatedButton(
-              onPressed: _logout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, // Optional: make it stand out
-              ),
-              child: Text('登出'),
+          SizedBox(height: 16),
+          Text(
+            _nicknameController.text.isNotEmpty
+                ? _nicknameController.text
+                : '温柔的朋友',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            '陪伴是最长情的告白',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-// class LoginPage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     // Implement your login page here
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('Login'),
-//       ),
-//       body: Center(
-//         child: Text('Login Page'),
-//       ),
-//     );
-//   }
-// }
+  Widget _buildSettingsSection(String title, List<Widget> items) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimens.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(AppDimens.paddingMedium),
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          ...items,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditableSettingItem(
+    IconData icon,
+    String title,
+    TextEditingController controller,
+    String hint, {
+    TextInputType? keyboardType,
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppDimens.paddingMedium,
+        vertical: 8,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: AppColors.success,
+                ),
+              ),
+              SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+              border: Border.all(
+                color: AppColors.textLight.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: TextStyle(
+                  color: AppColors.textLight,
+                  fontSize: 14,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.all(AppDimens.paddingMedium),
+              ),
+              style: TextStyle(
+                fontSize: 15,
+                color: AppColors.textPrimary,
+              ),
+              keyboardType: keyboardType,
+              maxLines: maxLines,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionSettingItem(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppDimens.paddingMedium,
+          vertical: 12,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: AppColors.success,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textLight,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.textLight,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
