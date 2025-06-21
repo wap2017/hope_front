@@ -331,7 +331,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // Create multipart request
       final url =
-          Uri.parse('http://hope.ioaths.com/hope/user/upload?type=$type');
+          Uri.parse('https://hope.layu.cc/hope/user/upload?type=$type');
       var request = http.MultipartRequest('POST', url);
 
       // Add authorization header

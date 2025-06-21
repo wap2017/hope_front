@@ -54,7 +54,7 @@ class UserProfile {
 class UserProfileService {
   static const String _userProfileKey = 'user_profile';
   static const String _authTokenKey = 'auth_token';
-  static const String _apiBaseUrl = 'http://hope.ioaths.com/hope';
+  static const String _apiBaseUrl = 'https://hope.layu.cc/hope';
   static UserProfile? _cachedProfile;
   static String? _authToken;
 

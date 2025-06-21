@@ -83,7 +83,7 @@ class _ChatPageState extends State<ChatPage> {
     try {
       final response = await http.get(
         Uri.parse(
-            "http://hope.ioaths.com/hope/messages?chat_id=1:${userid}&user_id=${userid}&last_id=$_lastId"),
+            "https://hope.layu.cc/hope/messages?chat_id=1:${userid}&user_id=${userid}&last_id=$_lastId"),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${token}',
@@ -132,7 +132,7 @@ class _ChatPageState extends State<ChatPage> {
     try {
       final token = await UserProfileService.getAuthToken();
       final response = await http.post(
-        Uri.parse('http://hope.ioaths.com/hope/send'),
+        Uri.parse('https://hope.layu.cc/hope/send'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${token}',
@@ -147,6 +147,8 @@ class _ChatPageState extends State<ChatPage> {
         await _fetchMessages();
         // Scroll to bottom after sending message
         _scrollToBottom();
+        await Future.delayed(Duration(seconds: 3));
+        await _fetchMessages();
       } else {
         print('Failed to send message: ${response.statusCode}');
       }

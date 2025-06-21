@@ -53,7 +53,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://hope.ioaths.com/hope/auth/verification-code'),
+        Uri.parse('https://hope.layu.cc/hope/auth/verification-code'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'mobile_number': _mobileController.text}),
       );
@@ -117,7 +117,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://hope.ioaths.com/hope/auth/register'),
+        Uri.parse('https://hope.layu.cc/hope/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'mobile_number': _mobileController.text,

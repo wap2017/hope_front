@@ -254,7 +254,7 @@ class _NotePageState extends State<NotePage> {
   final LoggingHttpClient _httpClient = LoggingHttpClient();
 
   // Base URL for API calls
-  final String _baseUrl = "http://hope.ioaths.com/hope";
+  final String _baseUrl = "https://hope.layu.cc/hope";
 
   // Format for displaying dates in the UI
   final DateFormat _displayDateFormat = DateFormat('yyyy.MM.dd');
