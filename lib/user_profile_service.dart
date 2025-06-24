@@ -241,6 +241,10 @@ class UserProfileService {
           _cachedProfile = updatedProfile;
           return true;
         }
+      } else if (response.statusCode == 401) {
+        // Handle 401 without context - clear cache and return false
+        clearCache();
+        return false;
       }
       return false;
     } catch (e) {

@@ -9,6 +9,7 @@ import 'home.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
 import 'main.dart';
+import 'api_error_handler.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -98,7 +99,9 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         );
       } else {
-        _showErrorMessage('Failed to update settings');
+        // _showErrorMessage('Failed to update settings');
+        ApiErrorHandler.handleException(context, Exception('Update failed'),
+            customMessage: '设置保存失败');
       }
     } catch (e) {
       _showErrorMessage('Error updating settings: $e');
