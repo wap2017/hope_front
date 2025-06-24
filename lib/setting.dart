@@ -259,6 +259,154 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _resetBackground() async {
+    // Show confirmation dialog
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimens.radiusMedium),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(AppDimens.paddingMedium),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.clear,
+                  size: 48,
+                  color: AppColors.warning,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  '重置聊天背景',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '确定要移除当前的聊天背景吗？',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(
+                          '取消',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.warning,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppDimens.radiusSmall),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          '确定',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Reset background URL to empty string
+        setState(() {
+          _backgroundUrl = '';
+        });
+
+        // Update profile with empty background
+        final profile = await UserProfileService.getProfile();
+        if (profile != null) {
+          final updatedProfile = UserProfile(
+            id: profile.id,
+            patientName: profile.patientName ?? '',
+            relationshipToPatient: profile.relationshipToPatient ?? '',
+            illnessCause: profile.illnessCause ?? '',
+            chatBackground: '', // Set to empty string
+            userAvatar: profile.userAvatar ?? '',
+            userNickname: profile.userNickname ?? '',
+            mobileNumber: profile.mobileNumber ?? '',
+          );
+
+          final success =
+              await UserProfileService.updateProfile(updatedProfile);
+
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('背景重置成功'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          } else {
+            // Revert the local change if API call failed
+            final originalProfile = await UserProfileService.getProfile();
+            setState(() {
+              _backgroundUrl = originalProfile?.chatBackground ?? '';
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('背景重置失败'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        print('Error resetting background: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('重置背景出错: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _changeBackground() async {
     showModalBottomSheet(
       context: context,
@@ -328,6 +476,23 @@ class _SettingsPageState extends State<SettingsPage> {
                     _getBackgroundImage(ImageSource.gallery);
                   },
                 ),
+                if (_backgroundUrl.isNotEmpty)
+                  ListTile(
+                    leading: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.1),
+                        borderRadius:
+                            BorderRadius.circular(AppDimens.radiusSmall),
+                      ),
+                      child: Icon(Icons.clear, color: AppColors.error),
+                    ),
+                    title: Text('重置背景'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _resetBackground();
+                    },
+                  ),
                 SizedBox(height: 20),
               ],
             ),
@@ -601,12 +766,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ]),
             SizedBox(height: AppDimens.paddingMedium),
             _buildSettingsSection('聊天设置', [
-              _buildActionSettingItem(
-                Icons.wallpaper_outlined,
-                '聊天背景',
-                '点击更换背景图片',
-                _changeBackground,
-              ),
+              _buildBackgroundSettingItem(),
             ]),
             SizedBox(height: AppDimens.paddingLarge),
             Container(
@@ -880,6 +1040,96 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBackgroundSettingItem() {
+    return InkWell(
+      onTap: _changeBackground,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppDimens.paddingMedium,
+          vertical: 12,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+                  ),
+                  child: Icon(
+                    Icons.wallpaper_outlined,
+                    size: 20,
+                    color: AppColors.success,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '聊天背景',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        _backgroundUrl.isNotEmpty ? '点击更换背景图片' : '点击设置背景图片',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: AppColors.textLight,
+                ),
+              ],
+            ),
+            // Show background preview if available
+            if (_backgroundUrl.isNotEmpty)
+              Container(
+                margin: EdgeInsets.only(top: 12, left: 44),
+                height: 100,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+                  border: Border.all(
+                    color: AppColors.textLight.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+                  child: Image.network(
+                    _backgroundUrl,
+                    width: double.infinity,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: AppColors.textLight.withOpacity(0.1),
+                      child: Icon(
+                        Icons.broken_image,
+                        color: AppColors.textLight,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
