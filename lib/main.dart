@@ -78,6 +78,20 @@ class AppTheme {
 }
 
 void main() {
+
+  // Add these lines to make app fullscreen and control status bar
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent, // Make status bar transparent
+      statusBarIconBrightness: Brightness.dark, // Dark icons for light background
+      systemNavigationBarColor: Colors.white, // Bottom navigation color
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+
   runApp(MyApp());
 }
 
