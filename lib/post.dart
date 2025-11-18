@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 import 'main.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 // Custom HTTP client wrapper with logging
 class LoggingHttpClient {
@@ -480,6 +481,18 @@ class _PostSquarePageState extends State<PostSquarePage> {
     // Navigate to post detail page
   }
 
+  void _openImageGallery(List<Map<String, dynamic>> images, int initialIndex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImageGalleryScreen(
+          images: images,
+          initialIndex: initialIndex,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -538,12 +551,15 @@ class _PostSquarePageState extends State<PostSquarePage> {
                               _userAvatarUrl!.isNotEmpty
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(20),
-                              child: Image.network(
-                                _userAvatarUrl!,
+                              child: CachedNetworkImage(
+                                imageUrl: _userAvatarUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Icon(Icons.person,
-                                        color: AppColors.textSecondary),
+                                placeholder: (context, url) => Icon(
+                                    Icons.person,
+                                    color: AppColors.textSecondary),
+                                errorWidget: (context, url, error) => Icon(
+                                    Icons.person,
+                                    color: AppColors.textSecondary),
                               ),
                             )
                           : Icon(Icons.person, color: AppColors.textSecondary),
@@ -777,14 +793,19 @@ class _PostSquarePageState extends State<PostSquarePage> {
                                           ? ClipRRect(
                                               borderRadius:
                                                   BorderRadius.circular(20),
-                                              child: Image.network(
-                                                userInfo['user_avatar'],
+                                              child: CachedNetworkImage(
+                                                imageUrl:
+                                                    userInfo['user_avatar'],
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (context, error,
-                                                        stackTrace) =>
+                                                placeholder: (context, url) =>
                                                     Icon(Icons.person,
                                                         color: AppColors
                                                             .textSecondary),
+                                                errorWidget:
+                                                    (context, url, error) =>
+                                                        Icon(Icons.person,
+                                                            color: AppColors
+                                                                .textSecondary),
                                               ),
                                             )
                                           : Icon(Icons.person,
@@ -840,7 +861,7 @@ class _PostSquarePageState extends State<PostSquarePage> {
                                   ),
                                 ),
 
-                              // Post images
+                              // Post images (thumbnails)
                               if (images.isNotEmpty)
                                 Padding(
                                   padding:
@@ -1002,16 +1023,28 @@ class _PostSquarePageState extends State<PostSquarePage> {
 
   Widget _buildImageGallery(List<Map<String, dynamic>> images) {
     if (images.length == 1) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Image.network(
-            _getImageUrl(images[0]['image_path']),
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: AppColors.textLight.withOpacity(0.1),
-              child: Icon(Icons.broken_image, color: AppColors.textLight),
+      return GestureDetector(
+        onTap: () => _openImageGallery(images, 0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: CachedNetworkImage(
+              imageUrl: _getThumbnailUrl(images[0]['image_path']),
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                color: AppColors.textLight.withOpacity(0.1),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(AppColors.success),
+                  ),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                color: AppColors.textLight.withOpacity(0.1),
+                child: Icon(Icons.broken_image, color: AppColors.textLight),
+              ),
             ),
           ),
         ),
@@ -1030,40 +1063,53 @@ class _PostSquarePageState extends State<PostSquarePage> {
           ),
           itemCount: images.length > 6 ? 6 : images.length,
           itemBuilder: (context, index) {
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
-                  child: Image.network(
-                    _getImageUrl(images[index]['image_path']),
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: AppColors.textLight.withOpacity(0.1),
-                      child:
-                          Icon(Icons.broken_image, color: AppColors.textLight),
-                    ),
-                  ),
-                ),
-                if (index == 5 && images.length > 6)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.radiusSmall),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '+${images.length - 6}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+            return GestureDetector(
+              onTap: () => _openImageGallery(images, index),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSmall),
+                    child: CachedNetworkImage(
+                      imageUrl: _getThumbnailUrl(images[index]['image_path']),
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: AppColors.textLight.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.success),
+                          ),
                         ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: AppColors.textLight.withOpacity(0.1),
+                        child: Icon(Icons.broken_image,
+                            color: AppColors.textLight),
                       ),
                     ),
                   ),
-              ],
+                  if (index == 5 && images.length > 6)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius:
+                            BorderRadius.circular(AppDimens.radiusSmall),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '+${images.length - 6}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         ),
@@ -1071,11 +1117,23 @@ class _PostSquarePageState extends State<PostSquarePage> {
     }
   }
 
-  String _getImageUrl(String path) {
+  String _getThumbnailUrl(String path) {
     if (path.startsWith('http')) {
       return path;
     }
-    return '$_baseUrl/file/$path';
+    // Get the filename from the path
+    String filename = path.split('/').last;
+    String directory = path.substring(0, path.lastIndexOf('/'));
+    // Add thumb_ prefix to the filename
+    String thumbnailFilename = 'thumb_$filename';
+    return '$_baseUrl/static/$directory/$thumbnailFilename';
+  }
+
+  String _getFullImageUrl(String path) {
+    if (path.startsWith('http')) {
+      return path;
+    }
+    return '$_baseUrl/static/$path';
   }
 
   String _formatDate(int? timestamp) {
@@ -1098,5 +1156,177 @@ class _PostSquarePageState extends State<PostSquarePage> {
     } else {
       return '刚刚';
     }
+  }
+}
+
+// Image Gallery Screen for full-screen viewing with swipe navigation
+class ImageGalleryScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> images;
+  final int initialIndex;
+
+  const ImageGalleryScreen({
+    Key? key,
+    required this.images,
+    this.initialIndex = 0,
+  }) : super(key: key);
+
+  @override
+  _ImageGalleryScreenState createState() => _ImageGalleryScreenState();
+}
+
+class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
+  late PageController _pageController;
+  late int _currentIndex;
+  final String _baseUrl = "https://hope.layu.cc/hope";
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  String _getFullImageUrl(String path) {
+    if (path.startsWith('http')) {
+      return path;
+    }
+    return '$_baseUrl/static/$path';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // PageView for swipeable images
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.images.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              return Center(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: CachedNetworkImage(
+                    imageUrl:
+                        _getFullImageUrl(widget.images[index]['image_path']),
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) => Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image,
+                              color: Colors.white, size: 64),
+                          SizedBox(height: 16),
+                          Text(
+                            '图片加载失败',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Top bar with close button
+          SafeArea(
+            child: Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.7),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white, size: 28),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text(
+                      '${_currentIndex + 1} / ${widget.images.length}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(width: 48), // Balance the layout
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Bottom indicator dots
+          if (widget.images.length > 1)
+            Positioned(
+              bottom: 32,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.5),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    widget.images.length,
+                    (index) => Container(
+                      margin: EdgeInsets.symmetric(horizontal: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _currentIndex == index
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.4),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
