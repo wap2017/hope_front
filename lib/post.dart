@@ -9,6 +9,7 @@ import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 import 'main.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'api_error_handler.dart';
 
 // Custom HTTP client wrapper with logging
 class LoggingHttpClient {
@@ -198,34 +199,36 @@ class _PostSquarePageState extends State<PostSquarePage> {
         },
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+      // Use ApiErrorHandler to handle 401 and other errors
+      final responseData = ApiErrorHandler.handleApiResponse(response, context,
+          customErrorMessage: '获取帖子失败');
 
-        if (responseData['success'] == true) {
-          final List<dynamic> newPosts = responseData['data'] ?? [];
-          final int totalCount = responseData['total'] ?? 0;
+      if (responseData == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return; // Request failed (including 401 handled automatically)
+      }
 
-          setState(() {
-            if (_currentPage == 1) {
-              _posts = List<Map<String, dynamic>>.from(newPosts);
-            } else {
-              _posts.addAll(List<Map<String, dynamic>>.from(newPosts));
-            }
+      if (responseData['success'] == true) {
+        final List<dynamic> newPosts = responseData['data'] ?? [];
+        final int totalCount = responseData['total'] ?? 0;
 
-            _hasMore = _posts.length < totalCount;
-            _isLoading = false;
-          });
-        } else {
-          setState(() {
-            _isLoading = false;
-          });
-          _showErrorMessage(responseData['message'] ?? 'Failed to load posts');
-        }
+        setState(() {
+          if (_currentPage == 1) {
+            _posts = List<Map<String, dynamic>>.from(newPosts);
+          } else {
+            _posts.addAll(List<Map<String, dynamic>>.from(newPosts));
+          }
+
+          _hasMore = _posts.length < totalCount;
+          _isLoading = false;
+        });
       } else {
         setState(() {
           _isLoading = false;
         });
-        _showErrorMessage('Server error: ${response.statusCode}');
+        _showErrorMessage(responseData['message'] ?? 'Failed to load posts');
       }
     } catch (e) {
       setState(() {
@@ -313,7 +316,16 @@ class _PostSquarePageState extends State<PostSquarePage> {
       final response = await _httpClient.sendMultipartRequest(request);
 
       if (response.statusCode == 201) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        // Use ApiErrorHandler to handle 401 and other errors
+        final responseData = ApiErrorHandler.handleApiResponse(response, context,
+            customErrorMessage: '发布帖子失败');
+
+        if (responseData == null) {
+          setState(() {
+            _isLoading = false;
+          });
+          return; // Request failed (including 401 handled automatically)
+        }
 
         if (responseData['success'] == true) {
           setState(() {
@@ -337,6 +349,13 @@ class _PostSquarePageState extends State<PostSquarePage> {
           _showErrorMessage(responseData['message'] ?? 'Failed to create post');
         }
       } else {
+        // Use ApiErrorHandler for non-success status codes
+        if (!ApiErrorHandler.handleHttpResponse(response, context)) {
+          setState(() {
+            _isLoading = false;
+          });
+          return; // 401 handled, user redirected to login
+        }
         setState(() {
           _isLoading = false;
         });
@@ -367,24 +386,26 @@ class _PostSquarePageState extends State<PostSquarePage> {
         },
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+      // Use ApiErrorHandler to handle 401 and other errors
+      final responseData = ApiErrorHandler.handleApiResponse(response, context,
+          customErrorMessage: '操作失败');
 
-        if (responseData['success'] == true) {
-          setState(() {
-            _posts[index]['liked'] = !_posts[index]['liked'];
-            if (_posts[index]['liked']) {
-              _posts[index]['like_count']++;
-            } else {
-              _posts[index]['like_count']--;
-            }
-          });
-        } else {
-          _showErrorMessage(
-              responseData['message'] ?? 'Failed to update like status');
-        }
+      if (responseData == null) {
+        return; // Request failed (including 401 handled automatically)
+      }
+
+      if (responseData['success'] == true) {
+        setState(() {
+          _posts[index]['liked'] = !_posts[index]['liked'];
+          if (_posts[index]['liked']) {
+            _posts[index]['like_count']++;
+          } else {
+            _posts[index]['like_count']--;
+          }
+        });
       } else {
-        _showErrorMessage('Server error: ${response.statusCode}');
+        _showErrorMessage(
+            responseData['message'] ?? 'Failed to update like status');
       }
     } catch (e) {
       _showErrorMessage('Error updating like status: $e');
@@ -453,24 +474,26 @@ class _PostSquarePageState extends State<PostSquarePage> {
         },
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+      // Use ApiErrorHandler to handle 401 and other errors
+      final responseData = ApiErrorHandler.handleApiResponse(response, context,
+          customErrorMessage: '删除帖子失败');
 
-        if (responseData['success'] == true) {
-          setState(() {
-            _posts.removeAt(index);
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('删除成功'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        } else {
-          _showErrorMessage(responseData['message'] ?? 'Failed to delete post');
-        }
+      if (responseData == null) {
+        return; // Request failed (including 401 handled automatically)
+      }
+
+      if (responseData['success'] == true) {
+        setState(() {
+          _posts.removeAt(index);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('删除成功'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       } else {
-        _showErrorMessage('Server error: ${response.statusCode}');
+        _showErrorMessage(responseData['message'] ?? 'Failed to delete post');
       }
     } catch (e) {
       _showErrorMessage('Error deleting post: $e');

@@ -7,6 +7,7 @@ import 'user_profile_service.dart';
 import 'setting.dart';
 import 'home.dart';
 import 'main.dart';
+import 'api_error_handler.dart';
 
 class ChatPage extends StatefulWidget {
   @override
@@ -83,6 +84,11 @@ class _ChatPageState extends State<ChatPage> {
         },
       );
 
+      // Use ApiErrorHandler to check for 401 and handle authentication errors
+      if (!ApiErrorHandler.handleHttpResponse(response, context)) {
+        return; // 401 handled, user redirected to login
+      }
+
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
         setState(() {
@@ -104,9 +110,13 @@ class _ChatPageState extends State<ChatPage> {
         if (!_isLoading) {
           _scrollToBottom();
         }
+      } else {
+        // Handle other HTTP errors
+        ApiErrorHandler.handleException(context, Exception('Failed to fetch messages'),
+            customMessage: '获取消息失败 (${response.statusCode})');
       }
     } catch (e) {
-      print('Error fetching messages: $e');
+      ApiErrorHandler.handleException(context, e, customMessage: '获取消息时发生网络错误');
     }
   }
 
@@ -132,6 +142,11 @@ class _ChatPageState extends State<ChatPage> {
         body: jsonEncode(message),
       );
 
+      // Use ApiErrorHandler to check for 401 and handle authentication errors
+      if (!ApiErrorHandler.handleHttpResponse(response, context)) {
+        return; // 401 handled, user redirected to login
+      }
+
       if (response.statusCode == 200) {
         _controller.clear();
         await _fetchMessages();
@@ -139,10 +154,12 @@ class _ChatPageState extends State<ChatPage> {
         await Future.delayed(Duration(seconds: 3));
         await _fetchMessages();
       } else {
-        print('Failed to send message: ${response.statusCode}');
+        // Handle other HTTP errors
+        ApiErrorHandler.handleException(context, Exception('Failed to send message'),
+            customMessage: '发送消息失败 (${response.statusCode})');
       }
     } catch (e) {
-      print('Error sending message: $e');
+      ApiErrorHandler.handleException(context, e, customMessage: '发送消息时发生网络错误');
     }
   }
 

@@ -589,6 +589,11 @@ class _SettingsPageState extends State<SettingsPage> {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
+      // Use ApiErrorHandler to check for 401 and handle authentication errors
+      if (!ApiErrorHandler.handleHttpResponse(response, context)) {
+        return null; // 401 handled, user redirected to login
+      }
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         if (responseData['success'] == true && responseData['data'] != null) {

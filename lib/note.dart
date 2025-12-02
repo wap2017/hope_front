@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
 import 'user_profile_service.dart';
 import 'main.dart';
+import 'api_error_handler.dart';
 
 // Custom HTTP client wrapper with logging
 class LoggingHttpClient {
@@ -444,32 +445,34 @@ class _NotePageState extends State<NotePage> {
         },
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+      // Use ApiErrorHandler to handle 401 and other errors
+      final responseData = ApiErrorHandler.handleApiResponse(response, context,
+          customErrorMessage: '获取心情记录失败');
 
-        if (responseData['success'] == true && responseData['data'] != null) {
-          final notesList =
-              List<Map<String, dynamic>>.from(responseData['data']);
+      if (responseData == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return; // Request failed (including 401 handled automatically)
+      }
 
-          notesList.sort((a, b) {
-            final dateA = _parseDateFromApi(a['note_date']);
-            final dateB = _parseDateFromApi(b['note_date']);
-            return dateB.compareTo(dateA);
-          });
+      if (responseData['success'] == true && responseData['data'] != null) {
+        final notesList =
+            List<Map<String, dynamic>>.from(responseData['data']);
 
-          setState(() {
-            _notes = notesList;
-            _isLoading = false;
-          });
-        } else {
-          setState(() {
-            _errorMessage = responseData['message'] ?? 'Failed to load notes';
-            _isLoading = false;
-          });
-        }
+        notesList.sort((a, b) {
+          final dateA = _parseDateFromApi(a['note_date']);
+          final dateB = _parseDateFromApi(b['note_date']);
+          return dateB.compareTo(dateA);
+        });
+
+        setState(() {
+          _notes = notesList;
+          _isLoading = false;
+        });
       } else {
         setState(() {
-          _errorMessage = 'Server error: ${response.statusCode}';
+          _errorMessage = responseData['message'] ?? 'Failed to load notes';
           _isLoading = false;
         });
       }
@@ -510,7 +513,16 @@ class _NotePageState extends State<NotePage> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        // Use ApiErrorHandler to handle 401 and other errors
+        final responseData = ApiErrorHandler.handleApiResponse(response, context,
+            customErrorMessage: '保存心情记录失败');
+
+        if (responseData == null) {
+          setState(() {
+            _isLoading = false;
+          });
+          return; // Request failed (including 401 handled automatically)
+        }
 
         if (responseData['success'] == true) {
           await _fetchNotes();
@@ -528,6 +540,13 @@ class _NotePageState extends State<NotePage> {
           });
         }
       } else {
+        // Use ApiErrorHandler for non-success status codes
+        if (!ApiErrorHandler.handleHttpResponse(response, context)) {
+          setState(() {
+            _isLoading = false;
+          });
+          return; // 401 handled, user redirected to login
+        }
         setState(() {
           _errorMessage = 'Server error: ${response.statusCode}';
           _isLoading = false;
@@ -565,35 +584,37 @@ class _NotePageState extends State<NotePage> {
         }),
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+      // Use ApiErrorHandler to handle 401 and other errors
+      final responseData = ApiErrorHandler.handleApiResponse(response, context,
+          customErrorMessage: '更新心情记录失败');
 
-        if (responseData['success'] == true) {
-          final int noteIndex =
-              _notes.indexWhere((note) => note['note_id'].toString() == noteId);
-          if (noteIndex != -1) {
-            setState(() {
-              _notes[noteIndex]['content'] = content;
-            });
-          }
+      if (responseData == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return; // Request failed (including 401 handled automatically)
+      }
 
-          await _fetchNotes();
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('心情记录更新成功'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        } else {
+      if (responseData['success'] == true) {
+        final int noteIndex =
+            _notes.indexWhere((note) => note['note_id'].toString() == noteId);
+        if (noteIndex != -1) {
           setState(() {
-            _errorMessage = responseData['message'] ?? 'Failed to update note';
-            _isLoading = false;
+            _notes[noteIndex]['content'] = content;
           });
         }
+
+        await _fetchNotes();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('心情记录更新成功'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       } else {
         setState(() {
-          _errorMessage = 'Server error: ${response.statusCode}';
+          _errorMessage = responseData['message'] ?? 'Failed to update note';
           _isLoading = false;
         });
       }
@@ -624,30 +645,32 @@ class _NotePageState extends State<NotePage> {
         },
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+      // Use ApiErrorHandler to handle 401 and other errors
+      final responseData = ApiErrorHandler.handleApiResponse(response, context,
+          customErrorMessage: '删除心情记录失败');
 
-        if (responseData['success'] == true) {
-          setState(() {
-            _notes.removeWhere((note) => note['note_id'].toString() == noteId);
-            _isLoading = false;
-          });
+      if (responseData == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return; // Request failed (including 401 handled automatically)
+      }
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('心情记录删除成功'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        } else {
-          setState(() {
-            _errorMessage = responseData['message'] ?? 'Failed to delete note';
-            _isLoading = false;
-          });
-        }
+      if (responseData['success'] == true) {
+        setState(() {
+          _notes.removeWhere((note) => note['note_id'].toString() == noteId);
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('心情记录删除成功'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       } else {
         setState(() {
-          _errorMessage = 'Server error: ${response.statusCode}';
+          _errorMessage = responseData['message'] ?? 'Failed to delete note';
           _isLoading = false;
         });
       }
