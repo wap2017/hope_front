@@ -36,15 +36,22 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    Future.delayed(Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+  void _scrollToBottom({bool animate = true}) {
+    // With reverse: true, position 0 is the bottom (latest messages)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          if (animate) {
+            _scrollController.animateTo(
+              0, // With reverse: true, 0 is the bottom
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          } else {
+            _scrollController.jumpTo(0);
+          }
+        }
+      });
     });
   }
 
@@ -66,6 +73,7 @@ class _ChatPageState extends State<ChatPage> {
       setState(() {
         _isLoading = false;
       });
+      // No need to scroll - reverse ListView starts at bottom automatically
     }
   }
 
@@ -91,6 +99,7 @@ class _ChatPageState extends State<ChatPage> {
 
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
+        final bool hadMessages = _messages.isNotEmpty;
         setState(() {
           final newMessages = data
               .map((message) => {
@@ -107,12 +116,14 @@ class _ChatPageState extends State<ChatPage> {
           }
         });
 
-        if (!_isLoading) {
+        // Only scroll when new messages added (not initial load - reverse handles that)
+        if (hadMessages && data.isNotEmpty) {
           _scrollToBottom();
         }
       } else {
         // Handle other HTTP errors
-        ApiErrorHandler.handleException(context, Exception('Failed to fetch messages'),
+        ApiErrorHandler.handleException(
+            context, Exception('Failed to fetch messages'),
             customMessage: '获取消息失败 (${response.statusCode})');
       }
     } catch (e) {
@@ -125,12 +136,23 @@ class _ChatPageState extends State<ChatPage> {
 
     final profile = await UserProfileService.getProfile();
     final userid = profile?.id;
-    final message = {
-      "user_id": userid,
-      "chat_id": "1:$userid",
-      "content": _controller.text
+    final messageContent = _controller.text;
+
+    // Step 1: Immediately show the message (optimistic UI)
+    final tempMessage = {
+      "sender_id": userid, // User's message, not AI (sender_id != 1)
+      "receiver_id": 1,
+      "content": messageContent,
+      "created_time": DateTime.now().toIso8601String(),
     };
 
+    setState(() {
+      _messages.add(tempMessage);
+    });
+    _controller.clear();
+    _scrollToBottom();
+
+    // Step 2: Send to server
     try {
       final token = await UserProfileService.getAuthToken();
       final response = await http.post(
@@ -139,26 +161,78 @@ class _ChatPageState extends State<ChatPage> {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${token}',
         },
-        body: jsonEncode(message),
+        body: jsonEncode({
+          "user_id": userid,
+          "chat_id": "1:$userid",
+          "content": messageContent
+        }),
       );
 
       // Use ApiErrorHandler to check for 401 and handle authentication errors
       if (!ApiErrorHandler.handleHttpResponse(response, context)) {
-        return; // 401 handled, user redirected to login
+        // Remove temp message on auth error
+        setState(() {
+          _messages.remove(tempMessage);
+        });
+        return;
       }
 
       if (response.statusCode == 200) {
-        _controller.clear();
-        await _fetchMessages();
-        _scrollToBottom();
-        await Future.delayed(Duration(seconds: 3));
-        await _fetchMessages();
+        // Step 3: Wait 10 seconds for AI to reply
+        await Future.delayed(Duration(seconds: 10));
+
+        // Step 4: Fetch new messages - only get AI reply (skip user message we already show)
+        final fetchResponse = await http.get(
+          Uri.parse(
+              "https://hope.layu.cc/hope/messages?chat_id=1:${userid}&user_id=${userid}&last_id=$_lastId"),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${token}',
+          },
+        );
+
+        if (fetchResponse.statusCode == 200) {
+          List<dynamic> data = jsonDecode(fetchResponse.body);
+
+          setState(() {
+            for (var message in data) {
+              // Only add AI replies (sender_id == 1), skip user's own message
+              // because we already show it as temp message
+              if (message["sender_id"] == 1) {
+                final newMessage = {
+                  "id": message["id"],
+                  "sender_id": message["sender_id"],
+                  "receiver_id": message["receiver_id"],
+                  "content": message["content"],
+                  "created_time": message["created_time"],
+                };
+                _messages.add(newMessage);
+              }
+            }
+
+            // Update lastId to the latest message from server
+            if (data.isNotEmpty) {
+              _lastId = data
+                  .map((m) => m["id"] as int)
+                  .reduce((a, b) => a > b ? a : b);
+            }
+          });
+          _scrollToBottom();
+        }
       } else {
-        // Handle other HTTP errors
-        ApiErrorHandler.handleException(context, Exception('Failed to send message'),
+        // Remove temp message on error
+        setState(() {
+          _messages.remove(tempMessage);
+        });
+        ApiErrorHandler.handleException(
+            context, Exception('Failed to send message'),
             customMessage: '发送消息失败 (${response.statusCode})');
       }
     } catch (e) {
+      // Remove temp message on error
+      setState(() {
+        _messages.remove(tempMessage);
+      });
       ApiErrorHandler.handleException(context, e, customMessage: '发送消息时发生网络错误');
     }
   }
@@ -215,10 +289,14 @@ class _ChatPageState extends State<ChatPage> {
                     )
                   : ListView.builder(
                       controller: _scrollController,
+                      reverse:
+                          true, // Start from bottom - standard chat pattern
                       padding: EdgeInsets.all(AppDimens.paddingMedium),
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
-                        final message = _messages[index];
+                        // Since list is reversed, we need to reverse the index
+                        final reversedIndex = _messages.length - 1 - index;
+                        final message = _messages[reversedIndex];
                         final bool isUserMessage = message["sender_id"] != 1;
 
                         return Padding(
